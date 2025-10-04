@@ -11,6 +11,7 @@
       <th scope="col">Product ID</th>
       <th scope="col">Product Name</th>
       <th scope="col">Price</th>
+      <th scope="col">Wishlist</th>
     </tr>
   </thead>
   <tbody>
@@ -19,6 +20,15 @@
         <th scope="row">{{product.id}}</th>
         <td>{{product.name}}</td>
         <td>{{product.price}}</td>
+        <td>
+          {% if current_user.is_authenticated %}
+          <form action="{{ url_for('wishlist.wishlist_add', product_id=product.id) }}" method="POST">
+            <input type="submit" value="Add to Wishlist"/>
+          </form>
+          {% else %}
+          <a href="{{ url_for('users.login') }}">Log in</a>
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
   </tbody>
