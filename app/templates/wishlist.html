@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<br><br>
+<h2>Your Wishlist</h2>
+{% if current_user.is_authenticated %}
+  {% if items %}
+  <table class="table table-hover table-bordered container">
+    <thead class="thead-dark">
+      <tr>
+        <th scope="col">Product ID</th>
+        <th scope="col">Added</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for item in items %}
+      <tr>
+        <th scope="row">{{ item.pid }}</th>
+        <td>{{ humanize_time(item.time_added) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>You have not added any products to your wishlist yet.</p>
+  {% endif %}
+{% else %}
+<p><a href="{{ url_for('users.login') }}">Log in</a> to see your wishlist.</p>
+{% endif %}
+{% endblock %}
