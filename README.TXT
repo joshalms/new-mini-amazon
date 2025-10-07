@@ -13,4 +13,12 @@ Josh:
         - Identified constraints inherent to the app's design
         - Highlighted relevant relationships between tables (with multiplicity considerations)
 
+Luke:
+    - Completed tutorial (branch deleted, not merged to main)
+    - Contributed to database design component of milestone 2
+        - Outlined necessary tables/attributes
+        - Identified constraints inherent to the app's design
+        - Highlighted relevant relationships between tables (with multiplicity considerations)
+
+
 Github Repo: https://github.com/joshalms/new-mini-amazon
