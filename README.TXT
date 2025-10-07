@@ -1,5 +1,9 @@
 Team Roles:
 Josh Alms - Users Guru
+Luke Rinaldi - Sellers Guru
+Mauricio Hernandez-Gonalez - Products Guru
+Dhruva Barua - Carts Guru
+Rafael Soh - Social Guru
 
 Team Contributions: 
 Josh:
