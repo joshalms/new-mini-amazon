@@ -1,7 +1,7 @@
 Team Roles:
 Josh Alms - Users Guru
 Luke Rinaldi - Sellers Guru
-Mauricio Hernandez-Gonalez - Products Guru
+Mauricio Hernandez-Gonzalez - Products Guru
 Dhruva Barua - Carts Guru
 Rafael Soh - Social Guru
 
@@ -33,5 +33,8 @@ Rafael:
         - Specified required UI/UX elements for each page
         - Outlined navigation flow and logical connections between user, product, and order pages
         - Helped ensure consistency and integration between individual modules (Users, Products, Carts, Sellers, Social)
+
+Mauricio:
+    - Completed tutorial (branch deleted, not merged to main)
 
 Github Repo: https://github.com/joshalms/new-mini-amazon
