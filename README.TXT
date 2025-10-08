@@ -20,5 +20,18 @@ Luke:
         - Identified constraints inherent to the app's design
         - Highlighted relevant relationships between tables (with multiplicity considerations)
 
+Dhruva:
+    - Completed tutorial (branch deleted, not merged to main)
+    - Contributed to the page-by-page design component of milestone 2
+        - Specified required UI/UX elements for each page
+        - Outlined navigation flow and logical connections between user, product, and order pages
+        - Helped ensure consistency and integration between individual modules (Users, Products, Carts, Sellers, Social)
+
+Rafael:
+    - Completed tutorial (branch deleted, not merged to main)
+    - Contributed to the page-by-page design component of milestone 2
+        - Specified required UI/UX elements for each page
+        - Outlined navigation flow and logical connections between user, product, and order pages
+        - Helped ensure consistency and integration between individual modules (Users, Products, Carts, Sellers, Social)
 
 Github Repo: https://github.com/joshalms/new-mini-amazon
