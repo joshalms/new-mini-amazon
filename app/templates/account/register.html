@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<br><br>
+<h2>Create an Account</h2>
+<form method="post" class="container" style="max-width: 500px;">
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" class="form-control" required value="{{ email or '' }}">
+  </div>
+  <div class="form-group">
+    <label for="full_name">Full Name</label>
+    <input id="full_name" name="full_name" type="text" class="form-control" required value="{{ full_name or '' }}">
+  </div>
+  <div class="form-group">
+    <label for="address">Address</label>
+    <textarea id="address" name="address" class="form-control" rows="3" required>{{ address or '' }}</textarea>
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" class="form-control" required>
+  </div>
+  <div class="form-group">
+    <label for="confirm">Confirm Password</label>
+    <input id="confirm" name="confirm" type="password" class="form-control" required>
+  </div>
+  <button class="btn btn-primary" type="submit">Register</button>
+  <a class="btn btn-link" href="{{ url_for('account.login') }}">Already registered? Log in</a>
+</form>
+{% endblock %}

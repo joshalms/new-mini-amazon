@@ -21,12 +21,12 @@
         <td>{{product.name}}</td>
         <td>{{product.price}}</td>
         <td>
-          {% if current_user.is_authenticated %}
+          {% if g.user %}
           <form action="{{ url_for('wishlist.wishlist_add', product_id=product.id) }}" method="POST">
             <input type="submit" value="Add to Wishlist"/>
           </form>
           {% else %}
-          <a href="{{ url_for('users.login') }}">Log in</a>
+          <a href="{{ url_for('account.login') }}">Log in</a>
           {% endif %}
         </td>
       </tr>
@@ -35,7 +35,7 @@
 </table>
 
 <br><br>
-{% if current_user.is_authenticated %}
+{% if g.user %}
 <h2>Your recent purchases:</h2>
 <table class='table table-hover table-bordered container'>
   <thead class="thead-dark">
@@ -56,7 +56,7 @@
   </tbody>
 </table>
 {% else %}
-<p><a href="{{ url_for('users.login') }}">Log in</a> to see your purchase history!</p>
+<p><a href="{{ url_for('account.login') }}">Log in</a> to see your purchase history!</p>
 {% endif %}
 
 {% endblock %}

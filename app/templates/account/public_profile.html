@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<br><br>
+<h2>Public Profile</h2>
+<div class="container" style="max-width: 600px;">
+  <p><strong>Account #:</strong> {{ user.id }}</p>
+  <p><strong>Name:</strong> {{ user.full_name }}</p>
+  {% if is_seller %}
+  <p><strong>Email:</strong> {{ user.email }}</p>
+  <p><strong>Address:</strong> {{ user.address }}</p>
+  {% endif %}
+
+  <hr>
+  <h3>Seller Reviews</h3>
+  <p>No reviews yet.</p>
+</div>
+{% endblock %}

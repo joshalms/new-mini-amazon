@@ -49,16 +49,42 @@
   <div class="sidenav">
     {% block msg %}
       <h1 style="color:aliceblue">Welcome to CompSci 316 Mini Amazon!</h1>
-      <div style="color: aliceblue; text-align: right; margin-bottom: 25px">
-        {% if current_user.is_authenticated %}
-          Hello {{current_user.firstname}}! <a href="{{ url_for('users.logout') }}" type="button" class="btn btn-light">Log out</a>
+      <div style="color: aliceblue; text-align: left; margin-bottom: 25px">
+        <a style="color:aliceblue; display:block;" href="{{ url_for('index.index') }}">Home</a>
+        {% if g.user %}
+          <span>Hello {{ g.user.full_name }} (Account #{{ g.user.id }})</span>
+          <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_home') }}">Account</a>
+          <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_purchases') }}">Purchase History</a>
+          <a style="color:aliceblue; display:block;" href="{{ url_for('account.public_profile', user_id=g.user.id) }}">Public Profile</a>
+          <form action="{{ url_for('account.logout') }}" method="post" style="margin-top:10px;">
+            <button class="btn btn-light btn-sm" type="submit">Log out</button>
+          </form>
         {% else %}
-          <a href="{{ url_for('users.login') }}" type="button" class="btn btn-light">Log in</a>
+          <a style="color:aliceblue; display:block;" href="{{ url_for('account.register') }}">Register</a>
+          <a style="color:aliceblue; display:block;" href="{{ url_for('account.login') }}">Log in</a>
         {% endif %}
       </div>
     {% endblock %}
   </div>
   <div class="main">
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        <div class="container" style="margin-top: 15px;">
+          <ul class="list-unstyled">
+            {% for category, message in messages %}
+              {% if category == 'error' %}
+                {% set alert_class = 'alert-danger' %}
+              {% elif category == 'success' %}
+                {% set alert_class = 'alert-success' %}
+              {% else %}
+                {% set alert_class = 'alert-info' %}
+              {% endif %}
+              <li class="alert {{ alert_class }} flash-{{ category|e }}">{{ message }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endwith %}
     {% block content %}{% endblock %}
   </div>
 </body>
