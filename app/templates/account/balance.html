@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 640px; margin-top: 40px;">
+  <h2>Manage Balance</h2>
+  <p class="lead">Current balance: {{ format_money(balance_cents) }}</p>
+
+  <form method="post" class="mb-4">
+    <div class="form-group">
+      <label for="amount_dollars">Amount (whole dollars)</label>
+      <input id="amount_dollars" name="amount_dollars" type="number" class="form-control" min="1" step="1" required>
+    </div>
+    <div class="form-group">
+      <label>Action</label>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="action" id="action_topup" value="topup" checked>
+        <label class="form-check-label" for="action_topup">
+          Top up (add funds)
+        </label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="action" id="action_withdraw" value="withdraw">
+        <label class="form-check-label" for="action_withdraw">
+          Withdraw (remove funds)
+        </label>
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit">Submit</button>
+  </form>
+
+  <h3>Recent Transactions</h3>
+  {% if history %}
+  <table class="table table-sm table-bordered">
+    <thead class="thead-light">
+      <tr>
+        <th scope="col">Date</th>
+        <th scope="col">Amount</th>
+        <th scope="col">Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in history %}
+      <tr>
+        <td>{{ tx.created_at.strftime('%b %d, %Y %I:%M %p') if tx.created_at else '' }}</td>
+        <td class="{{ 'text-success' if tx.amount_cents > 0 else 'text-danger' }}">
+          {% if tx.amount_cents > 0 %}+{% endif %}${{ '%.2f' % (tx.amount_cents / 100.0) }}
+        </td>
+        <td>{{ tx.note or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No transactions recorded yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

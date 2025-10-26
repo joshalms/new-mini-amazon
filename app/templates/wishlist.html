@@ -3,7 +3,7 @@
 {% block content %}
 <br><br>
 <h2>Your Wishlist</h2>
-{% if current_user.is_authenticated %}
+{% if g.user %}
   {% if items %}
   <table class="table table-hover table-bordered container">
     <thead class="thead-dark">
@@ -25,6 +25,6 @@
   <p>You have not added any products to your wishlist yet.</p>
   {% endif %}
 {% else %}
-<p><a href="{{ url_for('users.login') }}">Log in</a> to see your wishlist.</p>
+<p><a href="{{ url_for('account.login') }}">Log in</a> to see your wishlist.</p>
 {% endif %}
 {% endblock %}

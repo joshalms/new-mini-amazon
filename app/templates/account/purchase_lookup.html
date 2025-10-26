@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+<br><br>
+<h2>Lookup Purchases by User ID</h2>
+<div class="container" style="max-width: 600px;">
+  <form id="purchase-lookup-form" class="form-inline" onsubmit="return false;">
+    <div class="form-group mb-2">
+      <label for="lookup-user-id" class="sr-only">User ID</label>
+      <input id="lookup-user-id" type="number" class="form-control" placeholder="User ID" min="1" required>
+    </div>
+    <button id="lookup-submit" class="btn btn-primary mb-2" type="button">Fetch Purchases</button>
+  </form>
+
+  <div id="lookup-status" class="mt-3"></div>
+
+  <table id="lookup-results" class="table table-hover table-bordered mt-3" style="display: none;">
+    <thead class="thead-dark">
+      <tr>
+        <th scope="col">Order #</th>
+        <th scope="col">Date</th>
+        <th scope="col">Total (USD)</th>
+        <th scope="col">Items</th>
+        <th scope="col">Fulfilled?</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+(function() {
+  const lookupButton = document.getElementById('lookup-submit');
+  const userInput = document.getElementById('lookup-user-id');
+  const statusContainer = document.getElementById('lookup-status');
+  const resultsTable = document.getElementById('lookup-results');
+  const resultsBody = resultsTable.querySelector('tbody');
+
+  function setStatus(message, type) {
+    const className = type === 'error' ? 'alert alert-danger' : 'alert alert-info';
+    statusContainer.innerHTML = '<div class="' + className + '">' + message + '</div>';
+  }
+
+  function clearStatus() {
+    statusContainer.innerHTML = '';
+  }
+
+  function centsToDollars(cents) {
+    if (typeof cents !== 'number') return '$0.00';
+    return '$' + (cents / 100).toFixed(2);
+  }
+
+  lookupButton.addEventListener('click', async function() {
+    clearStatus();
+    resultsTable.style.display = 'none';
+    resultsBody.innerHTML = '';
+
+    const rawId = userInput.value.trim();
+    if (!rawId) {
+      setStatus('Please enter a user ID.', 'error');
+      return;
+    }
+
+    const userId = parseInt(rawId, 10);
+    if (Number.isNaN(userId) || userId < 1) {
+      setStatus('User ID must be a positive number.', 'error');
+      return;
+    }
+
+    setStatus('Loading purchases...', 'info');
+
+    try {
+      const response = await fetch(`/api/users/${encodeURIComponent(userId)}/purchases`);
+      if (!response.ok) {
+        throw new Error('Request failed with status ' + response.status);
+      }
+      const data = await response.json();
+      const orders = Array.isArray(data.orders) ? data.orders : [];
+
+      if (orders.length === 0) {
+        setStatus('No purchases found for user #' + userId + '.', 'info');
+        return;
+      }
+
+      orders.forEach(function(order) {
+        const row = document.createElement('tr');
+        const dateCell = order.created_at ? new Date(order.created_at).toLocaleString() : '';
+        row.innerHTML = [
+          '<th scope="row">' + order.id + '</th>',
+          '<td>' + dateCell + '</td>',
+          '<td>' + centsToDollars(order.total_cents) + '</td>',
+          '<td>' + (order.item_count || 0) + '</td>',
+          '<td>' + (order.fulfilled ? 'Yes' : 'No') + '</td>'
+        ].join('');
+        resultsBody.appendChild(row);
+
+        const detailRow = document.createElement('tr');
+        const detailCell = document.createElement('td');
+        detailCell.colSpan = 5;
+        if (Array.isArray(order.items) && order.items.length > 0) {
+          const list = document.createElement('ul');
+          order.items.forEach(function(item) {
+            const li = document.createElement('li');
+            const fulfilled = item.fulfilled_at ? new Date(item.fulfilled_at).toLocaleString() : 'Not fulfilled';
+            const lineTotal = centsToDollars(item.line_total_cents || 0);
+            li.textContent = item.product_name + ' — ' + item.quantity + ' × ' +
+              centsToDollars(item.unit_price_cents) + ' (Line Total: ' + lineTotal +
+              ', Fulfilled: ' + fulfilled + ')';
+            list.appendChild(li);
+          });
+          detailCell.appendChild(list);
+        } else {
+          detailCell.textContent = 'No line items recorded for this order.';
+        }
+        detailRow.appendChild(detailCell);
+        resultsBody.appendChild(detailRow);
+      });
+
+      clearStatus();
+      resultsTable.style.display = '';
+    } catch (err) {
+      setStatus('Could not load purchases: ' + err.message, 'error');
+    }
+  });
+})();
+</script>
+{% endblock %}

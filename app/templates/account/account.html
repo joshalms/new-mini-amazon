@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 640px; margin-top: 40px;">
+  <h2>Your Account</h2>
+  <p><strong>Account #:</strong> {{ user.id }}</p>
+  <p><strong>Name:</strong> {{ user.full_name }}</p>
+  <p><strong>Email:</strong> {{ user.email }}</p>
+  <p><strong>Address:</strong> {{ user.address }}</p>
+  <p><strong>Current Balance:</strong> {{ format_money(balance_cents) }}</p>
+
+  <div class="list-group mt-4">
+    <a class="list-group-item list-group-item-action" href="{{ url_for('account.account_edit') }}">
+      Update profile details
+    </a>
+    <a class="list-group-item list-group-item-action" href="{{ url_for('account.account_balance') }}">
+      Manage balance &amp; view transactions
+    </a>
+    <a class="list-group-item list-group-item-action" href="{{ url_for('account.account_purchases') }}">
+      View purchase history
+    </a>
+    <a class="list-group-item list-group-item-action" href="{{ url_for('account.public_profile', user_id=user.id) }}">
+      View public profile
+    </a>
+  </div>
+</div>
+{% endblock %}
