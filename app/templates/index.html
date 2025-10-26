@@ -2,6 +2,13 @@
 
 {% block content %}
 
+<!-- Cart button top right -->
+<div style="position: absolute; top: 20px; right: 40px;">
+  <a href="cart.html" class="btn btn-outline-primary">
+    <i class="fas fa-shopping-cart"></i> Cart
+  </a>
+</div>
+
 <br><br>
 
 <h2>Products for sale:</h2>
@@ -15,15 +22,15 @@
     </tr>
   </thead>
   <tbody>
-    {% for product in avail_products%}
+    {% for product in avail_products %}
       <tr>
-        <th scope="row">{{product.id}}</th>
-        <td>{{product.name}}</td>
-        <td>{{product.price}}</td>
+        <th scope="row">{{ product.id }}</th>
+        <td>{{ product.name }}</td>
+        <td>{{ product.price }}</td>
         <td>
           {% if current_user.is_authenticated %}
           <form action="{{ url_for('wishlist.wishlist_add', product_id=product.id) }}" method="POST">
-            <input type="submit" value="Add to Wishlist"/>
+            <input type="submit" value="Add to Wishlist" class="btn btn-sm btn-outline-success"/>
           </form>
           {% else %}
           <a href="{{ url_for('users.login') }}">Log in</a>
@@ -35,6 +42,7 @@
 </table>
 
 <br><br>
+
 {% if current_user.is_authenticated %}
 <h2>Your recent purchases:</h2>
 <table class='table table-hover table-bordered container'>
@@ -46,11 +54,11 @@
     </tr>
   </thead>
   <tbody>
-    {% for purchase in purchase_history%}
+    {% for purchase in purchase_history %}
       <tr>
-        <th scope="row">{{purchase.id}}</th>
-        <td>{{purchase.pid}}</td>
-        <td>{{purchase.time_purchased}}</td>
+        <th scope="row">{{ purchase.id }}</th>
+        <td>{{ purchase.pid }}</td>
+        <td>{{ purchase.time_purchased }}</td>
       </tr>
     {% endfor %}
   </tbody>
