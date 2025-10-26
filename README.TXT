@@ -38,3 +38,9 @@ Mauricio:
     - Completed tutorial (branch deleted, not merged to main)
 
 Github Repo: https://github.com/joshalms/new-mini-amazon
+
+
+Milestone 3:
+    Users Guru:
+        - Backend: models/user.py, models/purchases.py
+        - Frontend: templates/account/

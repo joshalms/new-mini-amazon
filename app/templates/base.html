@@ -54,6 +54,7 @@
         {% if g.user %}
           <span>Hello {{ g.user.full_name }} (Account #{{ g.user.id }})</span>
           <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_home') }}">Account</a>
+          <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_balance') }}">Balance</a>
           <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_purchases') }}">Purchase History</a>
           <a style="color:aliceblue; display:block;" href="{{ url_for('account.public_profile', user_id=g.user.id) }}">Public Profile</a>
           <form action="{{ url_for('account.logout') }}" method="post" style="margin-top:10px;">

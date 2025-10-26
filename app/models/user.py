@@ -1,6 +1,6 @@
 from flask import current_app as app
-from werkzeug.security import generate_password_hash
-from werkzeug.security import check_password_hash
+from sqlalchemy import text
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 class User:
@@ -47,7 +47,7 @@ WHERE email = :email
         return len(rows) > 0
 
     @staticmethod
-    def create(email, full_name, address, password):
+    def create(email, full_name, address, password_plaintext):
         rows = app.db.execute(
             """
 INSERT INTO Users (email, full_name, address, password_hash)
@@ -57,22 +57,20 @@ RETURNING id
             email=email,
             full_name=full_name,
             address=address,
-            password_hash=generate_password_hash(password),
+            password_hash=generate_password_hash(password_plaintext),
         )
         return User.get(rows[0][0]) if rows else None
 
     @staticmethod
-    def update_profile(user_id, email, full_name, address):
+    def update_profile(user_id, full_name, address):
         rows = app.db.execute(
             """
 UPDATE Users
-SET email = :email,
-    full_name = :full_name,
+SET full_name = :full_name,
     address = :address
 WHERE id = :user_id
 RETURNING id
 """,
-            email=email,
             full_name=full_name,
             address=address,
             user_id=user_id,
@@ -92,18 +90,117 @@ WHERE id = :id
         return User(*rows[0]) if rows else None
 
     @staticmethod
-    def authenticate(email, password):
+    def authenticate(email, password_plaintext):
+        result = User.get_with_password(email)
+        if not result:
+            return None
+        user, password_hash = result
+        if not check_password_hash(password_hash, password_plaintext):
+            return None
+        return user
+
+    @staticmethod
+    def update_password(user_id, new_password_plaintext):
         rows = app.db.execute(
             """
-SELECT id, email, full_name, address, created_at, password_hash
-FROM Users
-WHERE email = :email
+UPDATE Users
+SET password_hash = :password_hash
+WHERE id = :user_id
+RETURNING id
 """,
-            email=email,
+            password_hash=generate_password_hash(new_password_plaintext),
+            user_id=user_id,
         )
-        if not rows:
-            return None
-        row = rows[0]
-        if not check_password_hash(row[5], password):
-            return None
-        return User(row[0], row[1], row[2], row[3], row[4])
+        return len(rows) == 1
+
+    @staticmethod
+    def get_balance(user_id):
+        rows = app.db.execute(
+            """
+SELECT balance_cents
+FROM account_balance
+WHERE user_id = :user_id
+""",
+            user_id=user_id,
+        )
+        return rows[0][0] if rows else 0
+
+    @staticmethod
+    def adjust_balance(user_id, delta_cents, note=None):
+        if delta_cents == 0:
+            return User.get_balance(user_id)
+
+        with app.db.engine.begin() as conn:
+            conn.execute(
+                text(
+                    """
+INSERT INTO account_balance (user_id, balance_cents)
+VALUES (:user_id, 0)
+ON CONFLICT (user_id) DO NOTHING
+"""
+                ),
+                {'user_id': user_id},
+            )
+
+            balance_row = conn.execute(
+                text(
+                    """
+SELECT balance_cents
+FROM account_balance
+WHERE user_id = :user_id
+FOR UPDATE
+"""
+                ),
+                {'user_id': user_id},
+            ).first()
+
+            current_balance = balance_row[0] if balance_row else 0
+            new_balance = current_balance + delta_cents
+            if new_balance < 0:
+                raise ValueError('Insufficient funds')
+
+            conn.execute(
+                text(
+                    """
+UPDATE account_balance
+SET balance_cents = :new_balance
+WHERE user_id = :user_id
+"""
+                ),
+                {'new_balance': new_balance, 'user_id': user_id},
+            )
+            conn.execute(
+                text(
+                    """
+INSERT INTO balance_tx (user_id, amount_cents, note)
+VALUES (:user_id, :amount_cents, :note)
+"""
+                ),
+                {
+                    'user_id': user_id,
+                    'amount_cents': delta_cents,
+                    'note': note or '',
+                },
+            )
+
+        return new_balance
+
+    @staticmethod
+    def get_balance_history(user_id):
+        rows = app.db.execute(
+            """
+SELECT created_at, amount_cents, note
+FROM balance_tx
+WHERE user_id = :user_id
+ORDER BY created_at DESC
+""",
+            user_id=user_id,
+        )
+        return [
+            {
+                'created_at': row[0],
+                'amount_cents': row[1],
+                'note': row[2],
+            }
+            for row in rows
+        ]

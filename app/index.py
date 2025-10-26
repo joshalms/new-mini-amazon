@@ -15,7 +15,7 @@ def index():
     # find the products current user has bought:
     if g.get('user'):
         purchases = Purchase.get_all_by_uid_since(
-            g.user['id'], datetime.datetime(1980, 9, 14, 0, 0, 0))
+            g.user.id, datetime.datetime(1980, 9, 14, 0, 0, 0))
     else:
         purchases = None
     # render the page by adding information to the index.html file
