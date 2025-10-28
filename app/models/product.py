@@ -27,3 +27,15 @@ WHERE available = :available
 ''',
                               available=available)
         return [Product(*row) for row in rows]
+    
+    @staticmethod
+    def get_top_k_expensive(k):
+        rows = app.db.execute('''
+SELECT id, name, price, available
+FROM Products
+WHERE available = TRUE
+ORDER BY price DESC
+LIMIT :k
+''', k=k)
+        return [Product(*row) for row in rows]
+
