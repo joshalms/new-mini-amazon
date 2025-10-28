@@ -44,3 +44,6 @@ Milestone 3:
     Users Guru:
         - Backend: account.py, models/user.py, models/purchases.py
         - Frontend: templates/account/
+    Sellers Guru (Luke):
+        - Backend: inventory_routes.py, models/inventory.py
+        - Frontend: templates/inventory
