@@ -14,7 +14,9 @@ CREATE TABLE Users (
     full_name TEXT NOT NULL,
     address TEXT NOT NULL,
     password_hash TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    cart INTEGER[],
+    purchases INTEGER[]
 );
 
 CREATE TABLE account_balance (
