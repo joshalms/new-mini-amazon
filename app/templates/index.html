@@ -4,9 +4,15 @@
 
 <!-- Cart button top right -->
 <div style="position: absolute; top: 20px; right: 40px;">
-  <a href="cart.html" class="btn btn-outline-primary">
-    <i class="fas fa-shopping-cart"></i> Cart
-  </a>
+  {% if g.user %}
+    <a href="{{ url_for('cart.view_cart') }}" class="btn btn-outline-primary">
+      <i class="fas fa-shopping-cart"></i> Cart
+    </a>
+  {% else %}
+    <a href="{{ url_for('account.login', next=url_for('cart.view_cart')) }}" class="btn btn-outline-primary">
+      <i class="fas fa-shopping-cart"></i> Cart
+    </a>
+  {% endif %}
 </div>
 
 <br><br>

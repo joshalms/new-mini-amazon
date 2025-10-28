@@ -1,4 +1,4 @@
-\COPY users (id, email, full_name, address, password_hash, created_at) FROM 'Users.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
+\COPY users (id, email, full_name, address, password_hash, created_at, cart, purchases) FROM 'Users.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
 SELECT pg_catalog.setval('public.users_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM users), 1),
                          false);
@@ -39,3 +39,22 @@ SELECT pg_catalog.setval('public.purchases_id_seq',
 SELECT pg_catalog.setval('public.wishes_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM wishes), 1),
                          false);
+
+INSERT INTO cart (user_id)
+SELECT v.uid
+FROM (VALUES (1), (4)) AS v(uid)
+WHERE NOT EXISTS (SELECT 1 FROM cart WHERE user_id = v.uid);
+
+INSERT INTO cartitem (cart_id, product_id, quantity)
+SELECT c.id, v.pid, v.quantity
+FROM (VALUES
+    (1, 1, 2),
+    (1, 2, 1),
+    (4, 1, 1),
+    (4, 2, 3)
+) AS v(uid, pid, quantity)
+JOIN cart c ON c.user_id = v.uid
+WHERE NOT EXISTS (
+    SELECT 1 FROM cartitem ci
+    WHERE ci.cart_id = c.id AND ci.product_id = v.pid
+);

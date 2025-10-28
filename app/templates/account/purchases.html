@@ -9,8 +9,10 @@
       <tr>
         <th scope="col">Order #</th>
         <th scope="col">Date</th>
-        <th scope="col">Items</th>
-        <th scope="col">Total</th>
+        <th scope="col">Product</th>
+        <th scope="col">Quantity</th>
+        <th scope="col">Unit Price</th>
+        <th scope="col">Line Total</th>
         <th scope="col">Status</th>
       </tr>
     </thead>
@@ -18,11 +20,13 @@
       {% for purchase in purchases %}
       <tr>
         <th scope="row">
-          <a href="{{ '/orders/' ~ purchase.order_id }}">#{{ purchase.order_id }}</a>
+          #{{ purchase.order_id }}
         </th>
         <td>{{ purchase.order_created_at.strftime('%b %d, %Y %I:%M %p') if purchase.order_created_at else '' }}</td>
-        <td>{{ purchase.item_count }}</td>
-        <td>${{ '%.2f' % (purchase.total_cents / 100.0) }}</td>
+        <td>{{ purchase.product_name }}</td>
+        <td>{{ purchase.quantity }}</td>
+        <td>{{ format_money(purchase.unit_price_cents) }}</td>
+        <td>{{ format_money(purchase.line_total_cents) }}</td>
         <td>{{ 'Fulfilled' if purchase.fulfilled else 'In progress' }}</td>
       </tr>
       {% endfor %}

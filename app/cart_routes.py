@@ -1,5 +1,5 @@
 # app/cart_routes.py
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, jsonify, request, render_template, g
 from app.models.cart import get_cart_for_user, add_item_to_cart, set_item_quantity, clear_cart
 
 bp = Blueprint('cart', __name__)
@@ -36,10 +36,13 @@ def api_clear_cart(user_id):
 
 @bp.route('/cart')
 def view_cart():
-    from flask import request
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return "user not provided", 401
-    items = get_cart_for_user(int(user_id))
+    user_id = request.args.get('user_id', type=int)
+    if user_id is None:
+        user = getattr(g, 'user', None)
+        if user is not None:
+            user_id = user.id
+    if user_id is None:
+        return render_template('cart.html', items=[], total=0, user_id=None), 401
+    items = get_cart_for_user(user_id)
     total = sum((item['quantity'] or 0) * (item['price'] or 0) for item in items)
     return render_template('cart.html', items=items, total=total, user_id=user_id)
