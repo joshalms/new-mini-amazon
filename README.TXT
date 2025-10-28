@@ -47,3 +47,6 @@ Milestone 3:
     Sellers Guru (Luke):
         - Backend: inventory_routes.py, models/inventory.py
         - Frontend: templates/inventory
+    Products Guru (Mauricio):
+        - Backend: app/products.py, models/product.py
+        - Frontend: templates/top_products.html
