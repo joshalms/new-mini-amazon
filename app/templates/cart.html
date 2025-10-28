@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Your Cart</h1>
+
+<div id="cart-root">
+  <p id="loading">Loading cart…</p>
+  <div id="cart-error" role="alert" style="display:none;color:#b00020;"></div>
+
+  <table id="cart-table" style="width:100%; border-collapse: collapse; display:none;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:8px; border-bottom:1px solid #ddd;">Product</th>
+        <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Unit</th>
+        <th style="text-align:center; padding:8px; border-bottom:1px solid #ddd;">Qty</th>
+        <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Line</th>
+        <th style="padding:8px; border-bottom:1px solid #ddd;"></th>
+      </tr>
+    </thead>
+    <tbody id="cart-body"></tbody>
+  </table>
+
+  <p id="empty-cart" style="display:none;">Your cart is empty.</p>
+
+  <div id="cart-summary" style="margin-top:16px; display:none;">
+    <strong>Total:</strong> $<span id="cart-total">0.00</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  // server injects user_id into the template context (your view does that)
+  const USER_ID = 1;
+  if (!USER_ID) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('cart-error').innerText = 'No user provided to view cart.';
+    document.getElementById('cart-error').style.display = 'block';
+    return;
+  }
+
+  const API_BASE = '/api/cart/' + USER_ID;
+  const cartBody = document.getElementById('cart-body');
+  const loadingEl = document.getElementById('loading');
+  const errorEl = document.getElementById('cart-error');
+  const tableEl = document.getElementById('cart-table');
+  const emptyEl = document.getElementById('empty-cart');
+  const totalEl = document.getElementById('cart-total');
+  const summaryEl = document.getElementById('cart-summary');
+
+  // local map product_id -> debounce timer id
+  const timers = {};
+
+  // fetch and render
+  async function loadCart(){
+    loadingEl.style.display = '';
+    errorEl.style.display = 'none';
+    try {
+      const res = await fetch(API_BASE);
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      const data = await res.json();
+      renderCart(data.items || []);
+    } catch (err) {
+      showError('Failed to load cart: ' + err.message);
+      console.error(err);
+    } finally {
+      loadingEl.style.display = 'none';
+    }
+  }
+
+  function showError(msg){
+    errorEl.innerText = msg;
+    errorEl.style.display = '';
+    // hide after 6s
+    setTimeout(()=> errorEl.style.display = 'none', 6000);
+  }
+
+  function renderCart(items){
+    cartBody.innerHTML = '';
+    if (!items || items.length === 0){
+      tableEl.style.display = 'none';
+      summaryEl.style.display = 'none';
+      emptyEl.style.display = '';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    tableEl.style.display = '';
+    summaryEl.style.display = '';
+
+    let totalCents = 0; // compute in cents to reduce float errors
+    items.forEach(item => {
+      // price may be null if product not found; coerce to 0
+      const price = item.price ? Number(item.price) : 0;
+      const qty = Number(item.quantity) || 0;
+      const line = price * qty;
+      totalCents += Math.round(line * 100);
+
+      const tr = document.createElement('tr');
+      tr.dataset.productId = item.product_id;
+
+      tr.innerHTML = `
+        <td style="padding:8px; border-bottom:1px solid #eee;">${escapeHtml(item.name || ('Product ' + item.product_id))}</td>
+        <td style="text-align:right; padding:8px; border-bottom:1px solid #eee;">${formatMoney(price)}</td>
+        <td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">
+          <button class="decrease" aria-label="Decrease">−</button>
+          <input class="qty" type="number" min="0" value="${qty}" style="width:64px; text-align:center;" />
+          <button class="increase" aria-label="Increase">+</button>
+        </td>
+        <td style="text-align:right; padding:8px; border-bottom:1px solid #eee;">$<span class="line">${formatMoney(line)}</span></td>
+        <td style="padding:8px; border-bottom:1px solid #eee;">
+          <button class="remove">Remove</button>
+        </td>
+      `;
+      cartBody.appendChild(tr);
+
+      // attach handlers
+      const input = tr.querySelector('.qty');
+      const inc = tr.querySelector('.increase');
+      const dec = tr.querySelector('.decrease');
+      const removeBtn = tr.querySelector('.remove');
+      const lineEl = tr.querySelector('.line');
+
+      inc.addEventListener('click', ()=> {
+        input.value = Number(input.value || 0) + 1;
+        scheduleUpdate(item.product_id, input, lineEl, price);
+      });
+      dec.addEventListener('click', ()=> {
+        let v = Number(input.value || 0) - 1;
+        if (v < 0) v = 0;
+        input.value = v;
+        scheduleUpdate(item.product_id, input, lineEl, price);
+      });
+      removeBtn.addEventListener('click', ()=> {
+        input.value = 0;
+        scheduleUpdate(item.product_id, input, lineEl, price, /*immediate=*/true);
+      });
+
+      // when typing number, debounce update
+      input.addEventListener('input', ()=> {
+        scheduleUpdate(item.product_id, input, lineEl, price);
+      });
+    });
+
+    totalEl.innerText = centsToMoney(totalCents);
+  }
+
+  // scheduleUpdate debounces updates so rapid typing doesn't hammer the API
+  function scheduleUpdate(productId, inputEl, lineEl, unitPrice, immediate=false){
+    if (timers[productId]) {
+      clearTimeout(timers[productId]);
+    }
+    const doUpdate = async () => {
+      const qty = Math.max(0, parseInt(inputEl.value || '0', 10));
+      // optimistic UI: update line and total locally
+      const line = qty * Number(unitPrice || 0);
+      lineEl.innerText = formatMoney(line);
+      // recompute total from DOM (cheap)
+      recomputeTotal();
+
+      try {
+        // POST to set quantity endpoint
+        const res = await fetch(API_BASE + '/set', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({product_id: productId, quantity: qty})
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>res.statusText);
+          showError('Failed to update cart: ' + txt);
+          // on error, reload to be safe
+          setTimeout(loadCart, 700);
+        } else {
+          // successful: keep optimistic UI; optionally we could refresh
+        }
+      } catch (err) {
+        showError('Network error updating cart');
+        console.error(err);
+        setTimeout(loadCart, 700);
+      }
+    };
+
+    if (immediate) {
+      // send update immediately (for Remove)
+      doUpdate();
+    } else {
+      timers[productId] = setTimeout(doUpdate, 500);
+    }
+  }
+
+  function recomputeTotal(){
+    let total = 0;
+    document.querySelectorAll('#cart-body tr').forEach(tr=>{
+      const lineText = tr.querySelector('.line').innerText || '0';
+      const line = parseFloat(lineText.replace(/[^0-9.-]+/g,"")) || 0;
+      total += Math.round(line * 100);
+    });
+    totalEl.innerText = centsToMoney(total);
+  }
+
+  // Helpers
+  function formatMoney(amount){
+    return (Number(amount || 0)).toFixed(2);
+  }
+  function centsToMoney(cents){
+    return (cents/100).toFixed(2);
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+
+  // initial
+  loadCart();
+})();
+</script>
+
+{% endblock %}
