@@ -26,4 +26,7 @@ def create_app():
     from .cart_routes import bp as cart_bp
     app.register_blueprint(cart_bp)
 
+    from .inventory_routes import bp as inventory_bp
+    app.register_blueprint(inventory_bp)
+
     return app

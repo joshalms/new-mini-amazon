@@ -15,6 +15,11 @@ SELECT pg_catalog.setval('public.products_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM products), 1),
                          false);
 
+\COPY inventory (user_id, product_id, quantity) FROM 'Inventory.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
+SELECT pg_catalog.setval('public.inventory_id_seq',
+                         COALESCE((SELECT MAX(id)+1 FROM inventory), 1),
+                         false);
+
 \COPY orders (id, buyer_id, created_at, total_cents, fulfilled) FROM 'Orders.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
 SELECT pg_catalog.setval('public.orders_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM orders), 1),

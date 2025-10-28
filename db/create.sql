@@ -71,6 +71,12 @@ CREATE TABLE Wishes (
     time_added TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 );
 
+CREATE TABLE Inventory (
+    user_id INT NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES Products(id) ON DELETE CASCADE,
+    quantity INT NOT NULL CHECK (quantity >= 0),
+    PRIMARY KEY (user_id, product_id)
+);
 
 CREATE TABLE IF NOT EXISTS Cart (
   id BIGSERIAL PRIMARY KEY,

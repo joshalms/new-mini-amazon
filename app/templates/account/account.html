@@ -22,6 +22,9 @@
     <a class="list-group-item list-group-item-action" href="{{ url_for('account.public_profile', user_id=user.id) }}">
       View public profile
     </a>
+    <a class="list-group-item list-group-item-action" href="{{ url_for('inventory.view_inventory', user_id=user.id) }}">
+      View seller inventory
+    </a>
   </div>
 </div>
 {% endblock %}
