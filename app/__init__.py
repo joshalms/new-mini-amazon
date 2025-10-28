@@ -2,11 +2,15 @@ from flask import Flask
 
 from .config import Config
 from .db import DB
+from flask_cors import CORS
 
 
 def create_app():
     app = Flask(__name__)
+
     app.config.from_object(Config)
+
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     app.db = DB(app)
 
@@ -22,5 +26,11 @@ def create_app():
     from .products import bp as product_bp
     app.register_blueprint(product_bp)
 
+
+    from .cart_routes import bp as cart_bp
+    app.register_blueprint(cart_bp)
+
+    from .inventory_routes import bp as inventory_bp
+    app.register_blueprint(inventory_bp)
 
     return app

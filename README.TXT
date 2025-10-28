@@ -42,5 +42,8 @@ Github Repo: https://github.com/joshalms/new-mini-amazon
 
 Milestone 3:
     Users Guru:
-        - Backend: models/user.py, models/purchases.py
+        - Backend: account.py, models/user.py, models/purchases.py
         - Frontend: templates/account/
+    Sellers Guru (Luke):
+        - Backend: inventory_routes.py, models/inventory.py
+        - Frontend: templates/inventory
