@@ -104,18 +104,18 @@ CREATE TRIGGER cart_update_trigger
   EXECUTE FUNCTION touch_cart_updated_at();
 
 INSERT INTO Users (id, email, full_name, address, password_hash)
-  SELECT 1, 'alice@example.com', 'Alice Example', '1 A St', 'pw-hash'
+  SELECT 6, 'alice@example.com', 'Alice Example', '1 A St', 'pw-hash'
   WHERE NOT EXISTS (SELECT 1 FROM Users WHERE id = 1);
 
 INSERT INTO Users (id, email, full_name, address, password_hash)
-  SELECT 2, 'bob@example.com', 'Bob Example', '2 B Ave', 'pw-hash'
+  SELECT 7, 'bob@example.com', 'Bob Example', '2 B Ave', 'pw-hash'
   WHERE NOT EXISTS (SELECT 1 FROM Users WHERE id = 2);
 
 INSERT INTO Products (id, name, price, available)
-  SELECT 1, 'Sample Widget', 9.99, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 1);
+  SELECT 7, 'Sample Widget', 9.99, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 1);
 
 INSERT INTO Products (id, name, price, available)
-  SELECT 2, 'Another Thing', 19.95, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 2);
+  SELECT 8, 'Another Thing', 19.95, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 2);
 
 -- Create carts and fill sample items if they don't exist
 INSERT INTO Cart (user_id)

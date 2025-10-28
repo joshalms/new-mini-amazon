@@ -1,4 +1,4 @@
-\COPY users (id, email, full_name, address, password_hash, created_at) FROM 'Users.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
+\COPY users (id, email, full_name, address, password_hash, created_at, cart, purchases) FROM 'Users.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
 SELECT pg_catalog.setval('public.users_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM users), 1),
                          false);
