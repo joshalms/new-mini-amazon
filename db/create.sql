@@ -116,18 +116,3 @@ INSERT INTO Products (id, name, price, available)
 
 INSERT INTO Products (id, name, price, available)
   SELECT 8, 'Another Thing', 19.95, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 2);
-
--- Create carts and fill sample items if they don't exist
-INSERT INTO Cart (user_id)
-  SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM Cart WHERE user_id = 1);
-
-INSERT INTO Cart (user_id)
-  SELECT 2 WHERE NOT EXISTS (SELECT 1 FROM Cart WHERE user_id = 2);
-
-INSERT INTO CartItem (cart_id, product_id, quantity)
-  SELECT c.id, 1, 2 FROM Cart c WHERE c.user_id = 1
-  AND NOT EXISTS (SELECT 1 FROM CartItem ci WHERE ci.cart_id = c.id AND ci.product_id = 1);
-
-INSERT INTO CartItem (cart_id, product_id, quantity)
-  SELECT c.id, 2, 1 FROM Cart c WHERE c.user_id = 1
-  AND NOT EXISTS (SELECT 1 FROM CartItem ci WHERE ci.cart_id = c.id AND ci.product_id = 2);

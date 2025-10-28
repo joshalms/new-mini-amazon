@@ -19,8 +19,10 @@
       <tr>
         <th scope="col">Order #</th>
         <th scope="col">Date</th>
-        <th scope="col">Total (USD)</th>
-        <th scope="col">Items</th>
+        <th scope="col">Product</th>
+        <th scope="col">Quantity</th>
+        <th scope="col">Unit Price</th>
+        <th scope="col">Line Total</th>
         <th scope="col">Fulfilled?</th>
       </tr>
     </thead>
@@ -75,45 +77,26 @@
         throw new Error('Request failed with status ' + response.status);
       }
       const data = await response.json();
-      const orders = Array.isArray(data.orders) ? data.orders : [];
+      const items = Array.isArray(data.items) ? data.items : [];
 
-      if (orders.length === 0) {
+      if (items.length === 0) {
         setStatus('No purchases found for user #' + userId + '.', 'info');
         return;
       }
 
-      orders.forEach(function(order) {
+      items.forEach(function(item) {
         const row = document.createElement('tr');
-        const dateCell = order.created_at ? new Date(order.created_at).toLocaleString() : '';
+        const dateCell = item.order_created_at ? new Date(item.order_created_at).toLocaleString() : '';
         row.innerHTML = [
-          '<th scope="row">' + order.id + '</th>',
+          '<th scope="row">' + item.order_id + '</th>',
           '<td>' + dateCell + '</td>',
-          '<td>' + centsToDollars(order.total_cents) + '</td>',
-          '<td>' + (order.item_count || 0) + '</td>',
-          '<td>' + (order.fulfilled ? 'Yes' : 'No') + '</td>'
+          '<td>' + item.product_name + '</td>',
+          '<td>' + item.quantity + '</td>',
+          '<td>' + centsToDollars(item.unit_price_cents) + '</td>',
+          '<td>' + centsToDollars(item.line_total_cents) + '</td>',
+          '<td>' + (item.fulfilled ? 'Yes' : 'No') + '</td>'
         ].join('');
         resultsBody.appendChild(row);
-
-        const detailRow = document.createElement('tr');
-        const detailCell = document.createElement('td');
-        detailCell.colSpan = 5;
-        if (Array.isArray(order.items) && order.items.length > 0) {
-          const list = document.createElement('ul');
-          order.items.forEach(function(item) {
-            const li = document.createElement('li');
-            const fulfilled = item.fulfilled_at ? new Date(item.fulfilled_at).toLocaleString() : 'Not fulfilled';
-            const lineTotal = centsToDollars(item.line_total_cents || 0);
-            li.textContent = item.product_name + ' — ' + item.quantity + ' × ' +
-              centsToDollars(item.unit_price_cents) + ' (Line Total: ' + lineTotal +
-              ', Fulfilled: ' + fulfilled + ')';
-            list.appendChild(li);
-          });
-          detailCell.appendChild(list);
-        } else {
-          detailCell.textContent = 'No line items recorded for this order.';
-        }
-        detailRow.appendChild(detailCell);
-        resultsBody.appendChild(detailRow);
       });
 
       clearStatus();

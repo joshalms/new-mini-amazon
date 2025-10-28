@@ -271,7 +271,7 @@ def api_user_purchases(user_id):
         }
         for row in purchase_rows
     ]
-    return jsonify(serialized)
+    return jsonify({'items': serialized})
 
 
 @bp.route('/users/<int:user_id>')
