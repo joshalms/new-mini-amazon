@@ -70,3 +70,64 @@ CREATE TABLE Wishes (
     pid INT NOT NULL REFERENCES Products(id),
     time_added TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 );
+
+
+CREATE TABLE IF NOT EXISTS Cart (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT one_cart_per_user UNIQUE (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS CartItem (
+  id BIGSERIAL PRIMARY KEY,
+  cart_id BIGINT NOT NULL REFERENCES Cart(id) ON DELETE CASCADE,
+  product_id INT NOT NULL REFERENCES Products(id),
+  quantity INT NOT NULL CHECK (quantity > 0),
+  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(cart_id, product_id)
+);
+
+CREATE OR REPLACE FUNCTION touch_cart_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS cart_update_trigger ON Cart;
+CREATE TRIGGER cart_update_trigger
+  BEFORE UPDATE ON Cart
+  FOR EACH ROW
+  EXECUTE FUNCTION touch_cart_updated_at();
+
+INSERT INTO Users (id, email, full_name, address, password_hash)
+  SELECT 1, 'alice@example.com', 'Alice Example', '1 A St', 'pw-hash'
+  WHERE NOT EXISTS (SELECT 1 FROM Users WHERE id = 1);
+
+INSERT INTO Users (id, email, full_name, address, password_hash)
+  SELECT 2, 'bob@example.com', 'Bob Example', '2 B Ave', 'pw-hash'
+  WHERE NOT EXISTS (SELECT 1 FROM Users WHERE id = 2);
+
+INSERT INTO Products (id, name, price, available)
+  SELECT 1, 'Sample Widget', 9.99, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 1);
+
+INSERT INTO Products (id, name, price, available)
+  SELECT 2, 'Another Thing', 19.95, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 2);
+
+-- Create carts and fill sample items if they don't exist
+INSERT INTO Cart (user_id)
+  SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM Cart WHERE user_id = 1);
+
+INSERT INTO Cart (user_id)
+  SELECT 2 WHERE NOT EXISTS (SELECT 1 FROM Cart WHERE user_id = 2);
+
+INSERT INTO CartItem (cart_id, product_id, quantity)
+  SELECT c.id, 1, 2 FROM Cart c WHERE c.user_id = 1
+  AND NOT EXISTS (SELECT 1 FROM CartItem ci WHERE ci.cart_id = c.id AND ci.product_id = 1);
+
+INSERT INTO CartItem (cart_id, product_id, quantity)
+  SELECT c.id, 2, 1 FROM Cart c WHERE c.user_id = 1
+  AND NOT EXISTS (SELECT 1 FROM CartItem ci WHERE ci.cart_id = c.id AND ci.product_id = 2);
