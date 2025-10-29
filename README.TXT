@@ -5,7 +5,7 @@ Mauricio Hernandez-Gonzalez - Products Guru
 Dhruva Barua - Carts Guru
 Rafael Soh - Social Guru
 
-Team Contributions: 
+Team Contributions:
 Josh:
     - Completed tutorial (branch deleted after merge to main)
     - Contributed to database design component of milestone 2
@@ -50,3 +50,6 @@ Milestone 3:
     Products Guru (Mauricio):
         - Backend: app/products.py, models/product.py
         - Frontend: templates/top_products.html
+    Social Guru (Rafael):
+        - Backend: account.py, models/seller_review.py
+        - Frontend: templates/seller_reviews.html

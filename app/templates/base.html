@@ -52,6 +52,7 @@
       <h1 style="color:aliceblue">Welcome to CompSci 316 Mini Amazon!</h1>
       <div style="color: aliceblue; text-align: left; margin-bottom: 25px">
         <a style="color:aliceblue; display:block;" href="{{ url_for('index.index') }}">Home</a>
+        <a style="color:aliceblue; display:block;" href="{{ url_for('account.seller_reviews_page') }}">User Reviews</a>
         {% if g.user %}
           <span>Hello {{ g.user.full_name }} (Account #{{ g.user.id }})</span>
           <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_home') }}">Account</a>

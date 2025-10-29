@@ -40,6 +40,11 @@ SELECT pg_catalog.setval('public.wishes_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM wishes), 1),
                          false);
 
+\COPY seller_review (id, user_id, seller_id, rating, body, created_at, updated_at) FROM 'SellerReviews.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
+SELECT pg_catalog.setval('public.seller_review_id_seq',
+                         COALESCE((SELECT MAX(id)+1 FROM seller_review), 1),
+                         false);
+
 INSERT INTO cart (user_id)
 SELECT v.uid
 FROM (VALUES (1), (4)) AS v(uid)

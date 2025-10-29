@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models import purchases
 from app.models.user import User
+from app.models import seller_review
 
 
 bp = Blueprint('account', __name__)
@@ -272,6 +273,17 @@ def api_user_purchases(user_id):
         for row in purchase_rows
     ]
     return jsonify({'items': serialized})
+
+
+@bp.route('/api/users/<int:user_id>/seller-reviews')
+def api_user_seller_reviews(user_id):
+    reviews = seller_review.get_recent_by_user_id(user_id, limit=5)
+    return jsonify({'reviews': reviews})
+
+
+@bp.route('/seller-reviews')
+def seller_reviews_page():
+    return render_template('seller_reviews.html')
 
 
 @bp.route('/users/<int:user_id>')
