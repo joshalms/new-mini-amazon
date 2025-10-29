@@ -53,3 +53,6 @@ Milestone 3:
     Social Guru (Rafael):
         - Backend: account.py, models/seller_review.py
         - Frontend: templates/seller_reviews.html
+    Cart Guru (Dhruva):
+        - Backend: cart_routes.py, models/cart.py
+        - Frontend: templates/cart.html
