@@ -60,5 +60,5 @@ Code Breakdown:
         - Frontend: templates/cart.html
 
 Demo Video:
-    - https://drive.google.com/file/d/1awWmz4CRuHYecI0IH_2QpcP4VRY62oSZ/view?usp=sharing
+    - https://drive.google.com/file/d/1Fy7RcraR993XkU97kMW8r7DClJ6JnFLB/view?usp=sharing
 
