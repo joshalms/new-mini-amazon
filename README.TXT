@@ -41,6 +41,8 @@ Github Repo: https://github.com/joshalms/new-mini-amazon
 
 
 Milestone 3:
+
+Code Breakdown:
     Users Guru:
         - Backend: account.py, models/user.py, models/purchases.py
         - Frontend: templates/account/
@@ -56,3 +58,7 @@ Milestone 3:
     Cart Guru (Dhruva):
         - Backend: cart_routes.py, models/cart.py
         - Frontend: templates/cart.html
+
+Demo Video:
+    - https://drive.google.com/file/d/1awWmz4CRuHYecI0IH_2QpcP4VRY62oSZ/view?usp=sharing
+
