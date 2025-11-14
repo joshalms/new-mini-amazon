@@ -74,11 +74,11 @@ ORDER BY so.created_at DESC, so.id DESC, oi.id
                 'total_cents': row[2],
                 'item_count': int(row[3]),
                 'all_fulfilled': bool(row[4]),
-                'items': [],
+                'line_items': [],
             }
             orders.append(current_order)
 
-        current_order['items'].append(
+        current_order['line_items'].append(
             {
                 'product_id': row[5],
                 'product_name': row[6],

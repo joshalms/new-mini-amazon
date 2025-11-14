@@ -40,7 +40,7 @@
             <details>
               <summary class="mb-2">View items</summary>
               <ul class="mb-2 pl-3">
-                {% for line in order.items %}
+                {% for line in order.line_items %}
                 <li>
                   {{ line.quantity }} × {{ line.product_name }}
                   (<strong>{{ format_money(line.line_total_cents) }}</strong>)

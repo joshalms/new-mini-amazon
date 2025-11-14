@@ -93,7 +93,7 @@ def _serialize_order(order):
                 'line_total_cents': item['line_total_cents'],
                 'fulfilled': item['fulfilled'],
             }
-            for item in order.get('items', [])
+            for item in order.get('line_items', [])
         ],
     }
 
