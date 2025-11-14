@@ -16,9 +16,6 @@ SELECT pg_catalog.setval('public.products_id_seq',
                          false);
 
 \COPY inventory (user_id, product_id, quantity) FROM 'Inventory.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
-SELECT pg_catalog.setval('public.inventory_id_seq',
-                         COALESCE((SELECT MAX(id)+1 FROM inventory), 1),
-                         false);
 
 \COPY orders (id, buyer_id, created_at, total_cents, fulfilled) FROM 'Orders.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
 SELECT pg_catalog.setval('public.orders_id_seq',
@@ -44,22 +41,3 @@ SELECT pg_catalog.setval('public.wishes_id_seq',
 SELECT pg_catalog.setval('public.seller_review_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM seller_review), 1),
                          false);
-
-INSERT INTO cart (user_id)
-SELECT v.uid
-FROM (VALUES (1), (4)) AS v(uid)
-WHERE NOT EXISTS (SELECT 1 FROM cart WHERE user_id = v.uid);
-
-INSERT INTO cartitem (cart_id, product_id, quantity)
-SELECT c.id, v.pid, v.quantity
-FROM (VALUES
-    (1, 1, 2),
-    (1, 2, 1),
-    (4, 1, 1),
-    (4, 2, 3)
-) AS v(uid, pid, quantity)
-JOIN cart c ON c.user_id = v.uid
-WHERE NOT EXISTS (
-    SELECT 1 FROM cartitem ci
-    WHERE ci.cart_id = c.id AND ci.product_id = v.pid
-);

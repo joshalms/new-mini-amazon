@@ -3,13 +3,71 @@
 {% block content %}
 <div class="container" style="max-width: 640px; margin-top: 40px;">
   <h2>Public Profile</h2>
-  <p><strong>Account #:</strong> {{ user.id }}</p>
-  <p><strong>Name:</strong> {{ user.full_name }}</p>
-  <p><strong>Contact email:</strong> {{ user.email }}</p>
-  <p><strong>Address:</strong> {{ user.address }}</p>
+  <div class="card mb-4">
+    <div class="card-body">
+      <h4 class="card-title mb-1">{{ user.full_name }}</h4>
+      <p class="text-muted mb-2">Account #{{ user.id }}</p>
+      <div><strong>Email:</strong> {{ user.email }}</div>
+      <div><strong>Address:</strong> {{ user.address }}</div>
+      <div><strong>Member since:</strong> {{ user.created_at.strftime('%b %d, %Y') if user.created_at else '—' }}</div>
+    </div>
+  </div>
 
-  <hr>
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Purchase summary</h5>
+          <p class="display-4 mb-1">{{ purchase_summary.order_count }}</p>
+          <p class="text-muted">orders placed</p>
+          <p class="mb-1"><strong>Total spent:</strong> {{ format_money(purchase_summary.total_cents) }}</p>
+          <p>
+            <strong>Most recent order:</strong>
+            {% if purchase_summary.last_order_at %}
+            {{ purchase_summary.last_order_at.strftime('%b %d, %Y') }}
+            {% else %}
+            Never
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Seller rating</h5>
+          {% if seller_summary.review_count %}
+          <p class="display-4 mb-1">
+            {{ '%.1f'|format(seller_summary.average_rating or 0) }}
+            <small class="text-muted">/ 5</small>
+          </p>
+          <p class="text-muted">{{ seller_summary.review_count }} total reviews</p>
+          {% else %}
+          <p class="text-muted mb-0">No seller reviews yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <h3>Seller Reviews</h3>
-  <p>Seller reviews go here (to be implemented).</p>
+  {% if seller_reviews %}
+  {% for review in seller_reviews %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between">
+        <h5 class="mb-1">Rating: {{ review.rating }}/5</h5>
+        <small class="text-muted">
+          {{ review.created_at.strftime('%b %d, %Y %I:%M %p') if review.created_at else '' }}
+        </small>
+      </div>
+      <p class="mb-2">{{ review.body or 'No comment provided.' }}</p>
+      <div class="text-muted small">By user #{{ review.reviewer_id }} ({{ review.reviewer_name }})</div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="text-muted">This seller has not received any reviews yet.</p>
+  {% endif %}
 </div>
 {% endblock %}

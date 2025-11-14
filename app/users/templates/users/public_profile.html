@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 720px;">
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="card-title mb-2">Public Profile</h3>
+      <p class="text-muted mb-4">Account #{{ user_info.id }}</p>
+      <dl class="row">
+        <dt class="col-sm-4">Full Name</dt>
+        <dd class="col-sm-8">{{ user_info.full_name }}</dd>
+        {% if is_seller %}
+        <dt class="col-sm-4">Email</dt>
+        <dd class="col-sm-8">{{ user_info.email }}</dd>
+        <dt class="col-sm-4">Address</dt>
+        <dd class="col-sm-8">{{ user_info.address }}</dd>
+        {% else %}
+        <dt class="col-sm-4">Email</dt>
+        <dd class="col-sm-8 text-muted">Hidden (not a seller)</dd>
+        <dt class="col-sm-4">Address</dt>
+        <dd class="col-sm-8 text-muted">Hidden (not a seller)</dd>
+        {% endif %}
+        <dt class="col-sm-4">Member Since</dt>
+        <dd class="col-sm-8">{{ user_info.created_at.strftime('%b %d, %Y') if user_info.created_at else '' }}</dd>
+      </dl>
+      <div class="mt-4">
+        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('users.users_purchases', user_id=user_info.id) }}">Purchase History</a>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('users.users_me') }}">My Account</a>
+      </div>
+    </div>
+  </div>
+
+  {% if is_seller %}
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Seller Reviews</h5>
+      <p class="text-muted">Feedback from buyers will appear here.</p>
+      <!-- Social module: insert seller reviews here -->
+      <div id="seller-reviews-placeholder" class="border rounded p-3">
+        <p class="mb-0 text-muted">Social module will render reviews for seller #{{ user_info.id }}.</p>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">This user has not sold any items yet, so seller details are hidden.</div>
+  {% endif %}
+</div>
+{% endblock %}

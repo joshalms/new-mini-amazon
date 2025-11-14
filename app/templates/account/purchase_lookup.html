@@ -77,26 +77,44 @@
         throw new Error('Request failed with status ' + response.status);
       }
       const data = await response.json();
-      const items = Array.isArray(data.items) ? data.items : [];
+      const orders = Array.isArray(data.orders) ? data.orders : [];
 
-      if (items.length === 0) {
+      if (orders.length === 0) {
         setStatus('No purchases found for user #' + userId + '.', 'info');
         return;
       }
 
-      items.forEach(function(item) {
-        const row = document.createElement('tr');
-        const dateCell = item.order_created_at ? new Date(item.order_created_at).toLocaleString() : '';
-        row.innerHTML = [
-          '<th scope="row">' + item.order_id + '</th>',
-          '<td>' + dateCell + '</td>',
-          '<td>' + item.product_name + '</td>',
-          '<td>' + item.quantity + '</td>',
-          '<td>' + centsToDollars(item.unit_price_cents) + '</td>',
-          '<td>' + centsToDollars(item.line_total_cents) + '</td>',
-          '<td>' + (item.fulfilled ? 'Yes' : 'No') + '</td>'
-        ].join('');
-        resultsBody.appendChild(row);
+      var displayName = (data.user && data.user.full_name) ? data.user.full_name : ('user #' + userId);
+      setStatus('Showing ' + orders.length + ' recent orders for ' + displayName + '.', 'info');
+
+      orders.forEach(function(order) {
+        if (!Array.isArray(order.items) || order.items.length === 0) {
+          const row = document.createElement('tr');
+          const dateCell = order.order_created_at ? new Date(order.order_created_at).toLocaleString() : '';
+          row.innerHTML = [
+            '<th scope="row">' + order.order_id + '</th>',
+            '<td>' + dateCell + '</td>',
+            '<td colspan="5"><em>No line items found for this order.</em></td>'
+          ].join('');
+          resultsBody.appendChild(row);
+          return;
+        }
+
+        order.items.forEach(function(item, idx) {
+          const row = document.createElement('tr');
+          const dateCell = order.order_created_at ? new Date(order.order_created_at).toLocaleString() : '';
+          const orderCell = idx === 0 ? ('<th scope="row">#' + order.order_id + '</th>') : '<td></td>';
+          row.innerHTML = [
+            orderCell,
+            '<td>' + (idx === 0 ? dateCell : '') + '</td>',
+            '<td>' + item.product_name + '</td>',
+            '<td>' + item.quantity + '</td>',
+            '<td>' + centsToDollars(item.unit_price_cents) + '</td>',
+            '<td>' + centsToDollars(item.line_total_cents) + '</td>',
+            '<td>' + (item.fulfilled ? 'Yes' : 'No') + '</td>'
+          ].join('');
+          resultsBody.appendChild(row);
+        });
       });
 
       clearStatus();

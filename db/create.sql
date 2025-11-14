@@ -1,4 +1,6 @@
-
+DROP TABLE IF EXISTS CartItem CASCADE;
+DROP TABLE IF EXISTS Cart CASCADE;
+DROP TABLE IF EXISTS Inventory CASCADE;
 DROP TABLE IF EXISTS seller_review CASCADE;
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
@@ -122,16 +124,3 @@ CREATE TRIGGER cart_update_trigger
   FOR EACH ROW
   EXECUTE FUNCTION touch_cart_updated_at();
 
-INSERT INTO Users (id, email, full_name, address, password_hash)
-  SELECT 6, 'alice@example.com', 'Alice Example', '1 A St', 'pw-hash'
-  WHERE NOT EXISTS (SELECT 1 FROM Users WHERE id = 1);
-
-INSERT INTO Users (id, email, full_name, address, password_hash)
-  SELECT 7, 'bob@example.com', 'Bob Example', '2 B Ave', 'pw-hash'
-  WHERE NOT EXISTS (SELECT 1 FROM Users WHERE id = 2);
-
-INSERT INTO Products (id, name, price, available)
-  SELECT 7, 'Sample Widget', 9.99, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 1);
-
-INSERT INTO Products (id, name, price, available)
-  SELECT 8, 'Another Thing', 19.95, TRUE WHERE NOT EXISTS (SELECT 1 FROM Products WHERE id = 2);

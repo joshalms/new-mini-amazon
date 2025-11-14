@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start flex-wrap">
+        <div>
+          <h3 class="card-title mb-1">Account Dashboard</h3>
+          <p class="text-muted mb-3">Account #{{ user_info.id }} • Joined {{ user_info.created_at.strftime('%b %d, %Y') if user_info.created_at else '' }}</p>
+          <ul class="list-unstyled small mb-0">
+            <li><strong>Email:</strong> {{ user_info.email }}</li>
+            <li><strong>Name:</strong> {{ user_info.full_name }}</li>
+            <li><strong>Address:</strong> {{ user_info.address }}</li>
+          </ul>
+        </div>
+        <div class="text-right">
+          <span class="text-muted text-uppercase small">Current Balance</span>
+          <h2 id="balance-display" class="mb-0 text-success">{{ format_money(balance_cents) }}</h2>
+          <small class="text-muted">({{ balance_cents }}¢)</small>
+        </div>
+      </div>
+      <hr>
+      <div id="balance-alert" class="alert alert-dismissible fade show d-none" role="alert">
+        <span id="balance-alert-message"></span>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-4">
+          <div class="border rounded p-3 h-100">
+            <h5>Top Up Balance</h5>
+            <form id="topup-form" class="mt-3">
+              <div class="form-group">
+                <label for="topup-amount">Amount (cents)</label>
+                <input type="number" class="form-control" id="topup-amount" min="1" step="1" value="1000" required>
+              </div>
+              <button type="submit" class="btn btn-success btn-block">Add Funds</button>
+            </form>
+          </div>
+        </div>
+        <div class="col-md-6 mb-4">
+          <div class="border rounded p-3 h-100">
+            <h5>Withdraw Funds</h5>
+            <form id="withdraw-form" class="mt-3">
+              <div class="form-group">
+                <label for="withdraw-amount">Amount (cents)</label>
+                <input type="number" class="form-control" id="withdraw-amount" min="1" step="1" value="500" required>
+              </div>
+              <button type="submit" class="btn btn-warning btn-block">Withdraw</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="list-group shadow-sm">
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('users.users_purchases', user_id=user_info.id) }}">
+              View Purchase History
+              <i class="fa fa-chevron-right small"></i>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('users.users_balance_history') }}">
+              View Balance History
+              <i class="fa fa-chevron-right small"></i>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('users.public_profile', user_id=user_info.id) }}">
+              View Public Profile
+              <i class="fa fa-chevron-right small"></i>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('users.users_reviews_placeholder') }}">
+              My Reviews (Social module)
+              <i class="fa fa-chevron-right small"></i>
+            </a>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <div class="border rounded p-3 h-100 bg-light">
+            <h5 class="mb-3">Recent Balance Activity</h5>
+            {% if balance_history %}
+            <ul class="list-unstyled mb-0">
+              {% for entry in balance_history %}
+              <li class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small text-muted">{{ entry.created_at.strftime('%b %d, %Y %I:%M %p') if entry.created_at else '' }} — {{ entry.note }}</span>
+                {% set amt = entry.amount_cents %}
+                <span class="badge badge-pill {{ 'badge-success' if amt > 0 else 'badge-danger' if amt < 0 else 'badge-secondary' }}">
+                  {{ '+' if amt > 0 else '' }}{{ format_money(amt) }}
+                </span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No balance activity yet. Top up or withdraw to see history.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const alertBox = document.getElementById('balance-alert');
+  const alertMessage = document.getElementById('balance-alert-message');
+  const balanceDisplay = document.getElementById('balance-display');
+
+  function showAlert(message, type) {
+    alertBox.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+    alertBox.classList.add('alert-' + type);
+    alertMessage.textContent = message;
+  }
+
+  function hideAlert() {
+    alertBox.classList.add('d-none');
+    alertMessage.textContent = '';
+  }
+
+  function updateBalance(cents) {
+    const dollars = (cents / 100).toFixed(2);
+    balanceDisplay.textContent = `$${dollars}`;
+  }
+
+  async function postJSON(url, payload) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({ error: 'Unexpected error' }));
+      const message = data.error || (Array.isArray(data.errors) ? data.errors.join(', ') : 'Request failed');
+      throw new Error(message);
+    }
+    return response.json().catch(() => ({}));
+  }
+
+  document.getElementById('topup-form').addEventListener('submit', async function(evt) {
+    evt.preventDefault();
+    hideAlert();
+    const amount = parseInt(document.getElementById('topup-amount').value, 10);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      showAlert('Enter a positive integer amount in cents.', 'warning');
+      return;
+    }
+    try {
+      const data = await postJSON('{{ url_for("users.api_top_up") }}', { amount_cents: amount });
+      updateBalance(data.balance_cents);
+      showAlert(`Added ${(amount / 100).toFixed(2)} USD to your balance.`, 'success');
+    } catch (err) {
+      showAlert(err.message, 'danger');
+    }
+  });
+
+  document.getElementById('withdraw-form').addEventListener('submit', async function(evt) {
+    evt.preventDefault();
+    hideAlert();
+    const amount = parseInt(document.getElementById('withdraw-amount').value, 10);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      showAlert('Enter a positive integer amount in cents.', 'warning');
+      return;
+    }
+    try {
+      const data = await postJSON('{{ url_for("users.api_withdraw") }}', { amount_cents: amount });
+      updateBalance(data.balance_cents);
+      showAlert(`Withdrew ${(amount / 100).toFixed(2)} USD from your balance.`, 'success');
+    } catch (err) {
+      showAlert(err.message, 'danger');
+    }
+  });
+})();
+</script>
+{% endblock %}
