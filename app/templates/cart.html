@@ -39,7 +39,16 @@
   <p id="empty-cart" style="display:{% if items %}none{% else %}block{% endif %};">Your cart is empty.</p>
 
   <div id="cart-summary" style="margin-top:16px; display:{% if items %}block{% else %}none{% endif %};">
-    <strong>Total:</strong> $<span id="cart-total">{{ '%.2f'|format(total) }}</span>
+    <div style="margin-bottom:12px;">
+      <strong>Total:</strong> $<span id="cart-total">{{ '%.2f'|format(total) }}</span>
+    </div>
+    {% if user_id is not none %}
+    <form id="checkout-form" method="POST" action="{{ url_for('cart.checkout') }}" style="display:inline;">
+      <button type="submit" id="checkout-btn" style="padding:12px 24px; font-size:16px; background-color:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">
+        Checkout
+      </button>
+    </form>
+    {% endif %}
   </div>
 </div>
 
@@ -235,6 +244,40 @@
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, function (m) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+      });
+    }
+
+    // Handle checkout form submission
+    const checkoutForm = document.getElementById('checkout-form');
+    if (checkoutForm && USER_ID) {
+      checkoutForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('checkout-btn');
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = 'Processing...';
+        
+        try {
+          const checkoutUrl = `/api/cart/${USER_ID}/checkout`;
+          const res = await fetch(checkoutUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await res.json();
+          if (!res.ok) {
+            showError(data.error || 'Checkout failed');
+            btn.disabled = false;
+            btn.innerText = originalText;
+          } else {
+            // Success - form will submit normally to show flash message
+            checkoutForm.submit();
+          }
+        } catch (err) {
+          showError('Network error during checkout');
+          btn.disabled = false;
+          btn.innerText = originalText;
+        }
       });
     }
 

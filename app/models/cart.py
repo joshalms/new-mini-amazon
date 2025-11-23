@@ -40,7 +40,8 @@ def get_cart_for_user(user_id):
 def add_item_to_cart(user_id, product_id, quantity=1):
     db = _db()
     cart_id = get_or_create_cart(user_id)
-    rows = db.execute("SELECT id, quantity FROM CartItem WHERE cart_id = :cid AND product_id = :pid", cid=cart_id, pid=product_id)
+    rows = db.execute("SELECT id, quantity FROM CartItem WHERE cart_id = :cid AND product_id = :pid", 
+                      cid=cart_id, pid=product_id)
     if rows:
         item_id, existing = rows[0]
         new_q = existing + int(quantity)
@@ -53,18 +54,158 @@ def add_item_to_cart(user_id, product_id, quantity=1):
             db.execute("INSERT INTO CartItem (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)",
                        cid=cart_id, pid=product_id, q=quantity)
 
-def set_item_quantity(user_id, product_id, quantity):
+def set_item_quantity(user_id, product_id, quantity=0):
     db = _db()
     cart_id = get_or_create_cart(user_id)
     if int(quantity) <= 0:
-        db.execute("DELETE FROM CartItem WHERE cart_id = :cid AND product_id = :pid", cid=cart_id, pid=product_id)
+        db.execute("DELETE FROM CartItem WHERE cart_id = :cid AND product_id = :pid", 
+                  cid=cart_id, pid=product_id)
         return
-    rows = db.execute("SELECT id FROM CartItem WHERE cart_id = :cid AND product_id = :pid", cid=cart_id, pid=product_id)
+    rows = db.execute("SELECT id FROM CartItem WHERE cart_id = :cid AND product_id = :pid", 
+                      cid=cart_id, pid=product_id)
     if rows:
-        db.execute("UPDATE CartItem SET quantity = :q WHERE cart_id = :cid AND product_id = :pid", q=quantity, cid=cart_id, pid=product_id)
+        db.execute("UPDATE CartItem SET quantity = :q WHERE cart_id = :cid AND product_id = :pid", 
+                  q=quantity, cid=cart_id, pid=product_id)
     else:
-        db.execute("INSERT INTO CartItem (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)", cid=cart_id, pid=product_id, q=quantity)
+        db.execute("INSERT INTO CartItem (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)", 
+                  cid=cart_id, pid=product_id, q=quantity)
 
 def clear_cart(user_id):
     db = _db()
     db.execute("DELETE FROM CartItem WHERE cart_id = (SELECT id FROM Cart WHERE user_id = :uid)", uid=user_id)
+
+def submit_order(user_id):
+    """
+    Submit cart as order. Validates inventory and balance, creates order,
+    updates balances and inventories, then clears cart.
+    Returns (order_id, None) on success, or (None, error_message) on failure.
+    """
+    from app.models.user import User
+    from sqlalchemy import text
+    
+    db = _db()
+    
+    # Get cart items with product info
+    cart_items = db.execute("""
+        SELECT ci.product_id, ci.quantity, p.price, p.name
+        FROM CartItem ci
+        JOIN Cart c ON ci.cart_id = c.id
+        JOIN Products p ON ci.product_id = p.id
+        WHERE c.user_id = :uid
+        ORDER BY ci.id
+    """, uid=user_id)
+    
+    if not cart_items:
+        return None, "Cart is empty"
+    
+    # Validate all items before processing
+    items_to_order = []
+    total_cents = 0
+    
+    for item in cart_items:
+        product_id, quantity, price, name = item
+        
+        if price is None:
+            return None, f"Product '{name}' has no price"
+        
+        # Auto-select seller with sufficient inventory
+        seller_rows = db.execute("""
+            SELECT user_id, quantity FROM Inventory 
+            WHERE product_id = :pid AND quantity >= :qty
+            ORDER BY quantity DESC 
+            LIMIT 1
+        """, pid=product_id, qty=quantity)
+        
+        if not seller_rows:
+            return None, f"Product '{name}' has no seller with sufficient inventory (need {quantity})"
+        
+        seller_id = seller_rows[0][0]
+        available_qty = seller_rows[0][1]
+        
+        unit_price_cents = int(float(price) * 100)
+        line_total_cents = unit_price_cents * quantity
+        total_cents += line_total_cents
+        
+        items_to_order.append({
+            'product_id': product_id,
+            'seller_id': seller_id,
+            'quantity': quantity,
+            'unit_price_cents': unit_price_cents,
+            'name': name
+        })
+    
+    # Check buyer balance
+    buyer_balance = User.get_balance(user_id)
+    if buyer_balance < total_cents:
+        return None, f"Insufficient balance. Required: ${total_cents/100:.2f}, Available: ${buyer_balance/100:.2f}"
+    
+    # All validations passed - create order in transaction
+    try:
+        with db.engine.begin() as conn:
+            # Create order
+            order_result = conn.execute(
+                text("""
+                    INSERT INTO orders (buyer_id, total_cents, fulfilled)
+                    VALUES (:buyer_id, :total_cents, FALSE)
+                    RETURNING id
+                """),
+                {'buyer_id': user_id, 'total_cents': total_cents}
+            )
+            order_id = order_result.fetchone()[0]
+            
+            # Create order items and update inventories
+            seller_totals = {}  # Track how much to pay each seller
+            
+            for item in items_to_order:
+                # Create order item (seller_id can be NULL if not assigned)
+                conn.execute(
+                    text("""
+                        INSERT INTO order_items (order_id, product_id, seller_id, quantity, unit_price_cents)
+                        VALUES (:order_id, :product_id, :seller_id, :quantity, :unit_price_cents)
+                    """),
+                    {
+                        'order_id': order_id,
+                        'product_id': item['product_id'],
+                        'seller_id': item['seller_id'],  # Can be None
+                        'quantity': item['quantity'],
+                        'unit_price_cents': item['unit_price_cents']
+                    }
+                )
+                
+                # Decrement inventory
+                conn.execute(
+                    text("""
+                        UPDATE Inventory 
+                        SET quantity = quantity - :qty
+                        WHERE user_id = :seller_id AND product_id = :product_id
+                    """),
+                    {
+                        'qty': item['quantity'],
+                        'seller_id': item['seller_id'],
+                        'product_id': item['product_id']
+                    }
+                )
+                
+                # Track seller earnings
+                seller_earnings = item['unit_price_cents'] * item['quantity']
+                if item['seller_id'] not in seller_totals:
+                    seller_totals[item['seller_id']] = 0
+                seller_totals[item['seller_id']] += seller_earnings
+            
+            # Update buyer balance (decrement)
+            User.adjust_balance(user_id, -total_cents, f"Order #{order_id}")
+            
+            # Update seller balances (increment)
+            for seller_id, earnings_cents in seller_totals.items():
+                User.adjust_balance(seller_id, earnings_cents, f"Order #{order_id} sale")
+            
+            # Clear cart
+            conn.execute(
+                text("DELETE FROM CartItem WHERE cart_id = (SELECT id FROM Cart WHERE user_id = :uid)"),
+                {'uid': user_id}
+            )
+        
+        return order_id, None
+        
+    except Exception as e:
+        return None, f"Error processing order: {str(e)}"

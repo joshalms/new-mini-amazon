@@ -1,6 +1,6 @@
 # app/cart_routes.py
-from flask import Blueprint, jsonify, request, render_template, g
-from app.models.cart import get_cart_for_user, add_item_to_cart, set_item_quantity, clear_cart
+from flask import Blueprint, jsonify, request, render_template, g, redirect, url_for, flash
+from app.models.cart import get_cart_for_user, add_item_to_cart, set_item_quantity, clear_cart, submit_order
 
 bp = Blueprint('cart', __name__)
 
@@ -65,6 +65,37 @@ def api_clear_cart(user_id):
         return error
     clear_cart(user_id)
     return jsonify({"ok": True})
+
+
+@bp.route('/api/cart/<int:user_id>/checkout', methods=['POST'])
+def api_checkout(user_id):
+    error = _require_cart_owner(user_id)
+    if error:
+        return error
+    order_id, error_msg = submit_order(user_id)
+    if error_msg:
+        return jsonify({"error": error_msg}), 400
+    return jsonify({"ok": True, "order_id": order_id})
+
+
+@bp.route('/cart/checkout', methods=['POST'])
+def checkout():
+    user = getattr(g, 'user', None)
+    if user is None:
+        flash('Please log in to checkout', 'error')
+        return redirect(url_for('account.login'))
+    
+    order_id, error_msg = submit_order(user.id)
+    if error_msg:
+        flash(error_msg, 'error')
+        return redirect(url_for('cart.view_cart'))
+    
+    flash(f'Order #{order_id} placed successfully!', 'success')
+    # Redirect to order detail page if available, otherwise purchases
+    try:
+        return redirect(url_for('users.order_detail', order_id=order_id))
+    except:
+        return redirect(url_for('account.account_purchases'))
 
 
 @bp.route('/cart')
