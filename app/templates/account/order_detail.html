@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 40px;">
+  <a class="btn btn-link p-0 mb-3" href="{{ url_for('account.account_purchases') }}">&larr; Back to purchases</a>
+
+  <h2>Order #{{ order.order_id }}</h2>
+  <p class="text-muted mb-1">
+    Placed on {{ order.created_at.strftime('%b %d, %Y %I:%M %p') if order.created_at else 'unknown date' }}
+  </p>
+  <p>
+    Status:
+    {% if order.fulfilled %}
+    <span class="badge badge-success">Fulfilled</span>
+    {% else %}
+    <span class="badge badge-warning">In progress</span>
+    {% endif %}
+    <span class="ml-3 font-weight-bold">Total: {{ format_money(order.total_cents) }}</span>
+  </p>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-1">Shipping information</h5>
+      <div>{{ order.buyer.full_name }}</div>
+      <div>{{ order.buyer.address }}</div>
+      <div>{{ order.buyer.email }}</div>
+    </div>
+  </div>
+
+  <h4>Line items</h4>
+  {% if order.line_items %}
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered">
+      <thead class="thead-light">
+        <tr>
+          <th scope="col">Product</th>
+          <th scope="col">Quantity</th>
+          <th scope="col">Unit price</th>
+          <th scope="col">Line total</th>
+          <th scope="col">Fulfilled at</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in order.line_items %}
+        <tr>
+          <td>
+            {{ item.product_name }}
+            <div class="text-muted small">Product ID {{ item.product_id }}</div>
+          </td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ format_money(item.unit_price_cents) }}</td>
+          <td>{{ format_money(item.line_total_cents) }}</td>
+          <td>
+            {% if item.fulfilled_at %}
+            {{ item.fulfilled_at.strftime('%b %d, %Y %I:%M %p') }}
+            {% else %}
+            <span class="text-muted">Pending</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No items were recorded for this order.</p>
+  {% endif %}
+</div>
+{% endblock %}
