@@ -34,6 +34,7 @@
       <thead class="thead-light">
         <tr>
           <th scope="col">Product</th>
+          <th scope="col">Seller</th>
           <th scope="col">Quantity</th>
           <th scope="col">Unit price</th>
           <th scope="col">Line total</th>
@@ -47,6 +48,7 @@
             {{ item.product_name }}
             <div class="text-muted small">Product ID {{ item.product_id }}</div>
           </td>
+          <td>{{ item.seller_name or 'Unknown' }}</td>
           <td>{{ item.quantity }}</td>
           <td>{{ format_money(item.unit_price_cents) }}</td>
           <td>{{ format_money(item.line_total_cents) }}</td>

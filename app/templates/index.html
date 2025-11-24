@@ -24,6 +24,7 @@
       <th scope="col">Product ID</th>
       <th scope="col">Product Name</th>
       <th scope="col">Price</th>
+      <th scope="col">Avg Rating</th>
       <th scope="col">Wishlist</th>
     </tr>
   </thead>
@@ -33,6 +34,15 @@
         <th scope="row">{{ product.id }}</th>
         <td>{{ product.name }}</td>
         <td>{{ product.price }}</td>
+        <td>
+          {% if product.average_rating %}
+            <a href="{{ url_for('products.product_reviews', product_id=product.id) }}">
+              {{ '%.1f'|format(product.average_rating) }} / 5
+            </a>
+          {% else %}
+            --
+          {% endif %}
+        </td>
         <td>
           {% if g.user %}
           <form action="{{ url_for('wishlist.wishlist_add', product_id=product.id) }}" method="POST">

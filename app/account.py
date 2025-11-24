@@ -128,11 +128,13 @@ SELECT
     oi.product_id,
     p.name,
     oi.seller_id,
+    seller.full_name AS seller_name,
     oi.quantity,
     oi.unit_price_cents,
     oi.fulfilled_at
 FROM order_items oi
 JOIN products p ON p.id = oi.product_id
+LEFT JOIN users seller ON seller.id = oi.seller_id
 WHERE oi.order_id = :order_id
 ORDER BY oi.id
 """,
@@ -142,8 +144,8 @@ ORDER BY oi.id
     computed_total = 0
     line_items = []
     for row in line_rows:
-        quantity = row[4] or 0
-        unit_price = row[5] or 0
+        quantity = row[5] or 0
+        unit_price = row[6] or 0
         line_total = quantity * unit_price
         computed_total += line_total
         line_items.append(
@@ -152,10 +154,11 @@ ORDER BY oi.id
                 'product_id': row[1],
                 'product_name': row[2],
                 'seller_id': row[3],
+                'seller_name': row[4],
                 'quantity': quantity,
                 'unit_price_cents': unit_price,
                 'line_total_cents': line_total,
-                'fulfilled_at': row[6],
+                'fulfilled_at': row[7],
             }
         )
 

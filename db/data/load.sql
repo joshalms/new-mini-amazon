@@ -41,3 +41,8 @@ SELECT pg_catalog.setval('public.wishes_id_seq',
 SELECT pg_catalog.setval('public.seller_review_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM seller_review), 1),
                          false);
+
+\COPY product_review (id, user_id, product_id, rating, body, created_at, updated_at) FROM 'ProductReviews.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
+SELECT pg_catalog.setval('public.product_review_id_seq',
+                         COALESCE((SELECT MAX(id)+1 FROM product_review), 1),
+                         false);

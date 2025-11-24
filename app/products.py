@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, abort
 from app.models.product import Product
+from app.models import product_review
 
 bp = Blueprint('products', __name__)
 
@@ -33,3 +34,23 @@ def top_k_products():
         ])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/products/<int:product_id>/reviews')
+def product_reviews(product_id):
+    """
+    Display all reviews for a product.
+    """
+    product = Product.get(product_id)
+    if not product:
+        abort(404)
+
+    reviews = product_review.get_recent_reviews_for_product(product_id, limit=100)
+    summary = product_review.get_summary_for_product(product_id)
+
+    return render_template(
+        'product_reviews.html',
+        product=product,
+        reviews=reviews,
+        summary=summary,
+    )

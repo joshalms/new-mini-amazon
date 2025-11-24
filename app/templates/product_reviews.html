@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 960px;">
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="card-title mb-3">{{ product.name }}</h3>
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Product ID:</strong> {{ product.id }}</p>
+          <p class="mb-1"><strong>Price:</strong> ${{ product.price }}</p>
+        </div>
+        <div class="col-md-6">
+          {% if summary.review_count %}
+          <p class="h2 mb-1">
+            {{ '%.1f'|format(summary.average_rating or 0) }}
+            <small class="text-muted">/ 5</small>
+          </p>
+          <p class="text-muted">Based on {{ summary.review_count }} review{{ 's' if summary.review_count != 1 else '' }}</p>
+          {% else %}
+          <p class="text-muted">No reviews yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h4 class="mb-3">Customer Reviews</h4>
+  {% if reviews %}
+  {% for review in reviews %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between mb-2">
+        <div>
+          <strong>Rating: {{ review.rating }} / 5</strong>
+          {% if review.rating == 5 %}
+            <span class="text-warning">★★★★★</span>
+          {% elif review.rating == 4 %}
+            <span class="text-warning">★★★★</span><span class="text-muted">★</span>
+          {% elif review.rating == 3 %}
+            <span class="text-warning">★★★</span><span class="text-muted">★★</span>
+          {% elif review.rating == 2 %}
+            <span class="text-warning">★★</span><span class="text-muted">★★★</span>
+          {% elif review.rating == 1 %}
+            <span class="text-warning">★</span><span class="text-muted">★★★★</span>
+          {% endif %}
+        </div>
+        <small class="text-muted">
+          {{ review.created_at.strftime('%b %d, %Y %I:%M %p') if review.created_at else '' }}
+        </small>
+      </div>
+      <p class="mb-2">{{ review.body or 'No comment provided.' }}</p>
+      <div class="text-muted small">
+        By {{ review.reviewer_name }} (User #{{ review.reviewer_id }})
+      </div>
+      {% if review.updated_at and review.updated_at != review.created_at %}
+      <div class="text-muted small">
+        <em>Last updated: {{ review.updated_at.strftime('%b %d, %Y %I:%M %p') }}</em>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="alert alert-info">
+    This product hasn't received any reviews yet. Be the first to review it!
+  </div>
+  {% endif %}
+
+  <div class="mt-4">
+    <a href="{{ url_for('index.index') }}" class="btn btn-secondary">Back to Products</a>
+  </div>
+</div>
+{% endblock %}

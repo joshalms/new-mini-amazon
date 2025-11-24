@@ -108,13 +108,13 @@ def submit_order(user_id):
         if price is None:
             return None, f"Product '{name}' has no price"
         
-        # Auto-select seller with sufficient inventory
+        # Auto-select seller with sufficient inventory (exclude the buyer)
         seller_rows = db.execute("""
-            SELECT user_id, quantity FROM Inventory 
-            WHERE product_id = :pid AND quantity >= :qty
-            ORDER BY quantity DESC 
+            SELECT user_id, quantity FROM Inventory
+            WHERE product_id = :pid AND quantity >= :qty AND user_id != :buyer_id
+            ORDER BY quantity DESC
             LIMIT 1
-        """, pid=product_id, qty=quantity)
+        """, pid=product_id, qty=quantity, buyer_id=user_id)
         
         if not seller_rows:
             return None, f"Product '{name}' has no seller with sufficient inventory (need {quantity})"
