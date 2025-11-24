@@ -890,6 +890,53 @@ def users_purchases(user_id: int):
     )
 
 
+@bp.route('/users/search', methods=['GET'])
+def users_search():
+    """Allow authenticated users to search for other users by name and jump to their public profile."""
+    redirect_response = _ensure_login_for_page()
+    if redirect_response:
+        return redirect_response
+
+    query = (request.args.get('q') or '').strip()
+    results: List[Dict[str, Any]] = []
+    max_results = 25
+
+    if query:
+        pattern = f"%{query}%"
+        rows = current_app.db.execute(
+            """
+SELECT
+    u.id,
+    u.full_name,
+    u.email,
+    u.address,
+    u.created_at,
+    EXISTS (
+        SELECT 1 FROM order_items oi WHERE oi.seller_id = u.id
+    ) AS is_seller
+FROM Users u
+WHERE u.full_name ILIKE :pattern
+ORDER BY u.full_name
+LIMIT :limit
+""",
+            pattern=pattern,
+            limit=max_results,
+        )
+        for row in rows:
+            results.append(
+                {
+                    'id': row[0],
+                    'full_name': row[1],
+                    'email': row[2],
+                    'address': row[3],
+                    'created_at': row[4],
+                    'is_seller': bool(row[5]),
+                }
+            )
+
+    return render_template('users/search.html', query=query, results=results, max_results=max_results)
+
+
 @bp.route('/orders/<int:order_id>', methods=['GET'])
 def order_detail(order_id: int):
     """Render a detailed order view with fulfillment info (Spec §3.2 & §4.2)."""

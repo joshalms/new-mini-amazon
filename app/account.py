@@ -1,5 +1,6 @@
 from functools import wraps
 import math
+from decimal import Decimal, InvalidOperation
 
 from flask import (
     Blueprint,
@@ -330,16 +331,22 @@ def account_balance():
         amount_raw = request.form.get('amount_dollars', '').strip()
 
         try:
-            amount_dollars = int(amount_raw)
-        except (TypeError, ValueError):
-            flash('Enter a whole dollar amount.', 'error')
+            amount_decimal = Decimal(amount_raw)
+        except (TypeError, InvalidOperation):
+            flash('Enter a valid amount in dollars and cents.', 'error')
             return redirect(url_for('account.account_balance'))
 
-        if amount_dollars <= 0:
+        decimal_places = -amount_decimal.as_tuple().exponent if amount_decimal.as_tuple().exponent < 0 else 0
+        if decimal_places > 2:
+            flash('Amount cannot have more than two decimal places.', 'error')
+            return redirect(url_for('account.account_balance'))
+
+        amount_decimal = amount_decimal.quantize(Decimal('0.01'))
+        if amount_decimal <= 0:
             flash('Amount must be positive.', 'error')
             return redirect(url_for('account.account_balance'))
 
-        delta_cents = amount_dollars * 100
+        delta_cents = int(amount_decimal * 100)
         note = ''
 
         if action == 'topup':

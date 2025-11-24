@@ -33,4 +33,7 @@ def create_app():
     from .inventory_routes import bp as inventory_bp
     app.register_blueprint(inventory_bp)
 
+    from .users import routes as users_routes
+    app.register_blueprint(users_routes.bp)
+
     return app

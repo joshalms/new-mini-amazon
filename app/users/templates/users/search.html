@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="card-title mb-3">Find Users</h3>
+      <p class="text-muted mb-3">Search by name to jump to a user's public profile.</p>
+      <form method="get" class="form-inline">
+        <div class="form-group mb-2 mr-2 flex-grow-1" style="flex: 1;">
+          <label class="sr-only" for="search-query">Name</label>
+          <input type="text" class="form-control w-100" id="search-query" name="q" placeholder="e.g. Alice Smith" value="{{ query }}">
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Search</button>
+      </form>
+      {% if query %}
+      <p class="small text-muted mb-0">Showing up to {{ max_results }} matches for "{{ query }}".</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if query and results %}
+  <div class="list-group shadow-sm">
+    {% for user in results %}
+    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('users.public_profile', user_id=user.id) }}">
+      <div>
+        <div class="font-weight-bold">{{ user.full_name }}</div>
+        <div class="small text-muted">Account #{{ user.id }} • Joined {{ user.created_at.strftime('%b %d, %Y') if user.created_at else '' }}</div>
+      </div>
+      {% if user.is_seller %}
+      <span class="badge badge-success">Seller</span>
+      {% else %}
+      <span class="badge badge-light text-muted border">Buyer</span>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% elif query %}
+  <div class="alert alert-warning">No users matched "{{ query }}". Try another name.</div>
+  {% else %}
+  <div class="alert alert-info">Enter a name to search for users.</div>
+  {% endif %}
+</div>
+{% endblock %}
