@@ -10,12 +10,12 @@ bp = Blueprint('index', __name__)
 
 @bp.route('/')
 def index():
-    # get all available products for sale:
-    products = Product.get_all(True)
+    # get a limited set of available products for sale:
+    products = Product.get_featured(limit=50)
     # find the products current user has bought:
     if g.get('user'):
         purchases = Purchase.get_all_by_uid_since(
-            g.user.id, datetime.datetime(1980, 9, 14, 0, 0, 0))
+            g.user.id, datetime.datetime(1980, 9, 14, 0, 0, 0), limit=20)
     else:
         purchases = None
     # render the page by adding information to the index.html file
