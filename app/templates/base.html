@@ -4,89 +4,270 @@
 <head>
   <title>Mini Amazon</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
   <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
   <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/example.css') }}">
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-        font-family: "Lato", sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
     }
 
-    .main-head {
-        height: 150px;
-        background: #FFF;
+    .navbar {
+      background-color: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
 
-    .sidenav {
-        height: 100%;
-        background-color: #000;
-        overflow-x: hidden;
-        padding-top: 20px;
+    .navbar-brand {
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: #111 !important;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    .main {
-        padding: 0px 10px;
+    .navbar-brand i {
+      color: #ff9900;
     }
 
-    .login-main-text {
-        margin-top: 20%;
-        padding: 60px;
-        color: #fff;
+    .nav-link {
+      color: #555 !important;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem !important;
+      border-radius: 6px;
+      transition: all 0.15s ease;
     }
 
-    .login-main-text h2 {
-        font-weight: 300;
+    .nav-link:hover {
+      color: #111 !important;
+      background-color: #f3f4f6;
+    }
+
+    .nav-link i {
+      margin-right: 0.4rem;
+      font-size: 0.85rem;
+    }
+
+    .navbar-nav .dropdown-menu {
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .dropdown-item {
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      color: #555;
+    }
+
+    .dropdown-item:hover {
+      background-color: #f3f4f6;
+      color: #111;
+    }
+
+    .dropdown-item i {
+      margin-right: 0.5rem;
+      width: 16px;
+      text-align: center;
+      color: #888;
+    }
+
+    .dropdown-divider {
+      margin: 0.4rem 0;
+    }
+
+    .user-greeting {
+      font-size: 0.85rem;
+      color: #888;
+      padding: 0.4rem 1rem;
+      font-weight: 500;
+    }
+
+    .btn-logout {
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      color: #dc3545;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .btn-logout:hover {
+      background-color: #fef2f2;
+    }
+
+    .btn-logout i {
+      margin-right: 0.5rem;
+      width: 16px;
+      text-align: center;
+    }
+
+    .btn-auth {
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-login {
+      color: #555;
+      background: none;
+      border: none;
+    }
+
+    .btn-login:hover {
+      color: #111;
+      background-color: #f3f4f6;
+    }
+
+    .btn-register {
+      color: #fff;
+      background-color: #111;
+      border: none;
+      margin-left: 0.5rem;
+    }
+
+    .btn-register:hover {
+      background-color: #333;
+      color: #fff;
+    }
+
+    .navbar-toggler {
+      border: none;
+      padding: 0.5rem;
+    }
+
+    .navbar-toggler:focus {
+      box-shadow: none;
+    }
+
+    .main-content {
+      padding: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
     }
 
     .btn-black {
-        background-color: #000 !important;
-        color: #fff;
+      background-color: #111 !important;
+      color: #fff;
+      border: none;
+    }
+
+    .btn-black:hover {
+      background-color: #333 !important;
     }
   </style>
 </head>
 
 <body>
-  <div class="sidenav">
-    {% block msg %}
-      <h1 style="color:aliceblue">Welcome to CompSci 316 Mini Amazon!</h1>
-      <div style="color: aliceblue; text-align: left; margin-bottom: 25px">
-        <a style="color:aliceblue; display:block;" href="{{ url_for('index.index') }}">Home</a>
-        <a style="color:aliceblue; display:block;" href="{{ url_for('account.seller_reviews_page') }}">User Reviews</a>
+  <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="{{ url_for('index.index') }}">
+      <i class="fas fa-store"></i>
+      Mini Amazon
+    </a>
+
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('index.index') }}">
+            <i class="fas fa-home"></i>Home
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('account.seller_reviews_page') }}">
+            <i class="fas fa-star"></i>Reviews
+          </a>
+        </li>
         {% if g.user %}
-          <span>Hello {{ g.user.full_name }} (Account #{{ g.user.id }})</span>
-          <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_home') }}">Account</a>
-          <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_balance') }}">Balance</a>
-          <a style="color:aliceblue; display:block;" href="{{ url_for('users.users_search') }}">Search Users</a>
-          <a style="color:aliceblue; display:block;" href="{{ url_for('account.account_purchases') }}">Purchase History</a>
-          <a style="color:aliceblue; display:block;" href="{{ url_for('account.public_profile', user_id=g.user.id) }}">Public Profile</a>
-          <form action="{{ url_for('account.logout') }}" method="post" style="margin-top:10px;">
-            <button class="btn btn-light btn-sm" type="submit">Log out</button>
-          </form>
-        {% else %}
-          <a style="color:aliceblue; display:block;" href="{{ url_for('account.register') }}">Register</a>
-          <a style="color:aliceblue; display:block;" href="{{ url_for('account.login') }}">Log in</a>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('users.users_search') }}">
+            <i class="fas fa-search"></i>Search Users
+          </a>
+        </li>
         {% endif %}
-      </div>
-    {% endblock %}
-  </div>
-  <div class="main">
+      </ul>
+
+      <ul class="navbar-nav">
+        {% if g.user %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="userDropdown" data-toggle="dropdown">
+            <i class="fas fa-user-circle"></i>{{ g.user.full_name }}
+          </a>
+          <div class="dropdown-menu dropdown-menu-right">
+            <span class="user-greeting">Account #{{ g.user.id }}</span>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="{{ url_for('account.account_home') }}">
+              <i class="fas fa-cog"></i>Account Settings
+            </a>
+            <a class="dropdown-item" href="{{ url_for('account.public_profile', user_id=g.user.id) }}">
+              <i class="fas fa-id-card"></i>Public Profile
+            </a>
+            <a class="dropdown-item" href="{{ url_for('account.account_balance') }}">
+              <i class="fas fa-wallet"></i>Balance
+            </a>
+            <a class="dropdown-item" href="{{ url_for('account.account_purchases') }}">
+              <i class="fas fa-receipt"></i>Purchase History
+            </a>
+            <div class="dropdown-divider"></div>
+            <form action="{{ url_for('account.logout') }}" method="post" style="margin: 0;">
+              <button class="btn-logout" type="submit">
+                <i class="fas fa-sign-out-alt"></i>Log out
+              </button>
+            </form>
+          </div>
+        </li>
+        {% else %}
+        <li class="nav-item">
+          <a class="btn btn-auth btn-login" href="{{ url_for('account.login') }}">Log in</a>
+        </li>
+        <li class="nav-item">
+          <a class="btn btn-auth btn-register" href="{{ url_for('account.register') }}">Register</a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-content">
     {% with messages = get_flashed_messages(with_categories=True) %}
       {% if messages %}
-        <div class="container" style="margin-top: 15px;">
-          <ul class="list-unstyled">
-            {% for category, message in messages %}
-              {% if category == 'error' %}
-                {% set alert_class = 'alert-danger' %}
-              {% elif category == 'success' %}
-                {% set alert_class = 'alert-success' %}
-              {% else %}
-                {% set alert_class = 'alert-info' %}
-              {% endif %}
-              <li class="alert {{ alert_class }} flash-{{ category|e }}">{{ message }}</li>
-            {% endfor %}
-          </ul>
-        </div>
+        {% for category, message in messages %}
+          {% if category == 'error' %}
+            {% set alert_class = 'alert-danger' %}
+          {% elif category == 'success' %}
+            {% set alert_class = 'alert-success' %}
+          {% else %}
+            {% set alert_class = 'alert-info' %}
+          {% endif %}
+          <div class="alert {{ alert_class }}" style="border-radius: 8px; border: none; margin-bottom: 1rem;">{{ message }}</div>
+        {% endfor %}
       {% endif %}
     {% endwith %}
     {% block content %}{% endblock %}

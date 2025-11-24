@@ -45,6 +45,8 @@ from flask import (
 from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from app.models import seller_review
+
 bp = Blueprint('users', __name__, template_folder='templates')
 
 
@@ -954,6 +956,9 @@ def public_profile(user_id: int):
         abort(404)
 
     is_seller = _is_user_seller(user_id)
+    seller_reviews = seller_review.get_recent_reviews_for_seller(user_id, limit=10)
+    seller_summary = seller_review.get_summary_for_seller(user_id)
+
     return render_template(
         'users/public_profile.html',
         user_info={
@@ -964,6 +969,8 @@ def public_profile(user_id: int):
             'created_at': user_row[4],
         },
         is_seller=is_seller,
+        seller_reviews=seller_reviews,
+        seller_summary=seller_summary,
     )
 
 
