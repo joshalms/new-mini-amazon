@@ -33,8 +33,8 @@
             <h5>Top Up Balance</h5>
             <form id="topup-form" class="mt-3">
               <div class="form-group">
-                <label for="topup-amount">Amount (cents)</label>
-                <input type="number" class="form-control" id="topup-amount" min="1" step="1" value="1000" required>
+                <label for="topup-amount">Amount (USD)</label>
+                <input type="number" class="form-control" id="topup-amount" min="0.01" step="0.01" value="10.00" inputmode="decimal" required>
               </div>
               <button type="submit" class="btn btn-success btn-block">Add Funds</button>
             </form>
@@ -45,8 +45,8 @@
             <h5>Withdraw Funds</h5>
             <form id="withdraw-form" class="mt-3">
               <div class="form-group">
-                <label for="withdraw-amount">Amount (cents)</label>
-                <input type="number" class="form-control" id="withdraw-amount" min="1" step="1" value="500" required>
+                <label for="withdraw-amount">Amount (USD)</label>
+                <input type="number" class="form-control" id="withdraw-amount" min="0.01" step="0.01" value="5.00" inputmode="decimal" required>
               </div>
               <button type="submit" class="btn btn-warning btn-block">Withdraw</button>
             </form>
@@ -125,6 +125,18 @@
     balanceDisplay.textContent = `$${dollars}`;
   }
 
+  function dollarsToCents(value) {
+    const cleaned = (value || '').trim();
+    if (!cleaned || !/^\d+(\.\d{1,2})?$/.test(cleaned)) {
+      return null;
+    }
+    const numeric = Number(cleaned);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return null;
+    }
+    return Math.round(numeric * 100);
+  }
+
   async function postJSON(url, payload) {
     const response = await fetch(url, {
       method: 'POST',
@@ -142,15 +154,16 @@
   document.getElementById('topup-form').addEventListener('submit', async function(evt) {
     evt.preventDefault();
     hideAlert();
-    const amount = parseInt(document.getElementById('topup-amount').value, 10);
-    if (!Number.isInteger(amount) || amount <= 0) {
-      showAlert('Enter a positive integer amount in cents.', 'warning');
+    const amountStr = document.getElementById('topup-amount').value;
+    const amountCents = dollarsToCents(amountStr);
+    if (amountCents === null) {
+      showAlert('Enter an amount like 10.00 (dollars.cents, max two decimals).', 'warning');
       return;
     }
     try {
-      const data = await postJSON('{{ url_for("users.api_top_up") }}', { amount_cents: amount });
+      const data = await postJSON('{{ url_for("users.api_top_up") }}', { amount_cents: amountCents });
       updateBalance(data.balance_cents);
-      showAlert(`Added ${(amount / 100).toFixed(2)} USD to your balance.`, 'success');
+      showAlert(`Added ${(amountCents / 100).toFixed(2)} USD to your balance.`, 'success');
     } catch (err) {
       showAlert(err.message, 'danger');
     }
@@ -159,15 +172,16 @@
   document.getElementById('withdraw-form').addEventListener('submit', async function(evt) {
     evt.preventDefault();
     hideAlert();
-    const amount = parseInt(document.getElementById('withdraw-amount').value, 10);
-    if (!Number.isInteger(amount) || amount <= 0) {
-      showAlert('Enter a positive integer amount in cents.', 'warning');
+    const amountStr = document.getElementById('withdraw-amount').value;
+    const amountCents = dollarsToCents(amountStr);
+    if (amountCents === null) {
+      showAlert('Enter an amount like 10.00 (dollars.cents, max two decimals).', 'warning');
       return;
     }
     try {
-      const data = await postJSON('{{ url_for("users.api_withdraw") }}', { amount_cents: amount });
+      const data = await postJSON('{{ url_for("users.api_withdraw") }}', { amount_cents: amountCents });
       updateBalance(data.balance_cents);
-      showAlert(`Withdrew ${(amount / 100).toFixed(2)} USD from your balance.`, 'success');
+      showAlert(`Withdrew ${(amountCents / 100).toFixed(2)} USD from your balance.`, 'success');
     } catch (err) {
       showAlert(err.message, 'danger');
     }
