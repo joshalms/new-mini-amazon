@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 600px; margin-top: 40px;">
+  <a class="btn btn-link p-0 mb-3" href="{{ url_for('account.order_detail', order_id=order.order_id) }}">&larr; Back to order</a>
+
+  <h2>{{ 'Edit' if review else 'Write' }} {{ 'Product' if review_type == 'product' else 'Seller' }} Review</h2>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      {% if review_type == 'product' %}
+      <h5 class="card-title mb-1">{{ item.product_name }}</h5>
+      <div class="text-muted small">Product ID {{ item.product_id }}</div>
+      {% else %}
+      <h5 class="card-title mb-1">{{ item.seller_name }}</h5>
+      <div class="text-muted small">Seller ID {{ item.seller_id }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="post">
+    <div class="form-group">
+      <label for="rating">Rating</label>
+      <select class="form-control" id="rating" name="rating" required>
+        {% for i in range(5, 0, -1) %}
+        <option value="{{ i }}" {{ 'selected' if review and review.rating == i }}>
+          {{ '★' * i }}{{ '☆' * (5 - i) }} ({{ i }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="body">Review (optional)</label>
+      <textarea class="form-control" id="body" name="body" rows="4" placeholder="Share your experience...">{{ review.body if review else '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-black">Save Review</button>
+  </form>
+</div>
+{% endblock %}

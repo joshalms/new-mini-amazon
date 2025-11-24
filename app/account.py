@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models import purchases
 from app.models.user import User
 from app.models import seller_review
+from app.models import product_review
 
 
 bp = Blueprint('account', __name__)
@@ -419,6 +420,10 @@ def order_detail(order_id):
         abort(404)
     if order['buyer']['id'] != g.user.id:
         abort(403)
+    # Add review status for each line item
+    for item in order['line_items']:
+        item['product_review'] = product_review.get_user_review_for_product(g.user.id, item['product_id'])
+        item['seller_review'] = seller_review.get_user_review_for_seller(g.user.id, item['seller_id']) if item['seller_id'] else None
     return render_template('account/order_detail.html', order=order)
 
 
@@ -530,4 +535,76 @@ def public_profile(user_id):
         purchase_summary=purchase_summary,
         seller_summary=seller_summary,
         seller_reviews=seller_reviews,
+    )
+
+
+@bp.route('/account/orders/<int:order_id>/review-product/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def review_product(order_id, product_id):
+    order = _get_order_detail(order_id)
+    if order is None:
+        abort(404)
+    if order['buyer']['id'] != g.user.id:
+        abort(403)
+
+    # Verify product is in the order
+    item = next((i for i in order['line_items'] if i['product_id'] == product_id), None)
+    if item is None:
+        abort(404)
+
+    existing = product_review.get_user_review_for_product(g.user.id, product_id)
+
+    if request.method == 'POST':
+        rating = _parse_positive_int(request.form.get('rating'), 5, minimum=1, maximum=5)
+        body = request.form.get('body', '').strip()
+        if existing:
+            product_review.update_review(existing['id'], rating, body)
+            flash('Review updated.', 'success')
+        else:
+            product_review.create_review(g.user.id, product_id, rating, body)
+            flash('Review submitted.', 'success')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    return render_template(
+        'account/review_form.html',
+        order=order,
+        item=item,
+        review=existing,
+        review_type='product',
+    )
+
+
+@bp.route('/account/orders/<int:order_id>/review-seller/<int:seller_id>', methods=['GET', 'POST'])
+@login_required
+def review_seller(order_id, seller_id):
+    order = _get_order_detail(order_id)
+    if order is None:
+        abort(404)
+    if order['buyer']['id'] != g.user.id:
+        abort(403)
+
+    # Verify seller is in the order
+    item = next((i for i in order['line_items'] if i['seller_id'] == seller_id), None)
+    if item is None:
+        abort(404)
+
+    existing = seller_review.get_user_review_for_seller(g.user.id, seller_id)
+
+    if request.method == 'POST':
+        rating = _parse_positive_int(request.form.get('rating'), 5, minimum=1, maximum=5)
+        body = request.form.get('body', '').strip()
+        if existing:
+            seller_review.update_review(existing['id'], rating, body)
+            flash('Review updated.', 'success')
+        else:
+            seller_review.create_review(g.user.id, seller_id, rating, body)
+            flash('Review submitted.', 'success')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    return render_template(
+        'account/review_form.html',
+        order=order,
+        item=item,
+        review=existing,
+        review_type='seller',
     )

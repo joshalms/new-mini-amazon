@@ -1,4 +1,5 @@
 from flask import current_app as app
+from sqlalchemy import text
 
 
 def get_recent_reviews_for_seller(seller_id, limit=5):
@@ -68,3 +69,75 @@ WHERE seller_id = :seller_id
         'first_review_at': row[2],
         'last_review_at': row[3],
     }
+
+
+def get_user_review_for_seller(user_id, seller_id):
+    """Get a specific user's review for a seller, if it exists."""
+    rows = app.db.execute(
+        '''
+SELECT sr.id, sr.user_id, sr.seller_id, sr.rating, sr.body, sr.created_at, sr.updated_at
+FROM seller_review sr
+WHERE sr.user_id = :user_id AND sr.seller_id = :seller_id
+''',
+        user_id=user_id,
+        seller_id=seller_id,
+    )
+    if not rows:
+        return None
+    row = rows[0]
+    return {
+        'id': row[0],
+        'user_id': row[1],
+        'seller_id': row[2],
+        'rating': row[3],
+        'body': row[4],
+        'created_at': row[5],
+        'updated_at': row[6],
+    }
+
+
+def create_review(user_id, seller_id, rating, body):
+    """Create a new seller review."""
+    with app.db.engine.begin() as conn:
+        result = conn.execute(
+            text('''
+INSERT INTO seller_review (user_id, seller_id, rating, body)
+VALUES (:user_id, :seller_id, :rating, :body)
+RETURNING id, created_at, updated_at
+'''),
+            {'user_id': user_id, 'seller_id': seller_id, 'rating': rating, 'body': body},
+        ).first()
+        return {
+            'id': result[0],
+            'user_id': user_id,
+            'seller_id': seller_id,
+            'rating': rating,
+            'body': body,
+            'created_at': result[1],
+            'updated_at': result[2],
+        }
+
+
+def update_review(review_id, rating, body):
+    """Update an existing seller review."""
+    with app.db.engine.begin() as conn:
+        result = conn.execute(
+            text('''
+UPDATE seller_review
+SET rating = :rating, body = :body, updated_at = NOW()
+WHERE id = :review_id
+RETURNING id, user_id, seller_id, rating, body, created_at, updated_at
+'''),
+            {'review_id': review_id, 'rating': rating, 'body': body},
+        ).first()
+        if not result:
+            return None
+        return {
+            'id': result[0],
+            'user_id': result[1],
+            'seller_id': result[2],
+            'rating': result[3],
+            'body': result[4],
+            'created_at': result[5],
+            'updated_at': result[6],
+        }

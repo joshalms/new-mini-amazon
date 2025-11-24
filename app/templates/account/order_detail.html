@@ -47,8 +47,22 @@
           <td>
             {{ item.product_name }}
             <div class="text-muted small">Product ID {{ item.product_id }}</div>
+            <a class="btn btn-sm {{ 'btn-outline-secondary' if item.product_review else 'btn-outline-primary' }} mt-1"
+               href="{{ url_for('account.review_product', order_id=order.order_id, product_id=item.product_id) }}">
+              {{ 'Edit Review' if item.product_review else 'Review Product' }}
+            </a>
           </td>
-          <td>{{ item.seller_name or 'Unknown' }}</td>
+          <td>
+            {{ item.seller_name or 'Unknown' }}
+            {% if item.seller_id %}
+            <div>
+              <a class="btn btn-sm {{ 'btn-outline-secondary' if item.seller_review else 'btn-outline-primary' }} mt-1"
+                 href="{{ url_for('account.review_seller', order_id=order.order_id, seller_id=item.seller_id) }}">
+                {{ 'Edit Review' if item.seller_review else 'Review Seller' }}
+              </a>
+            </div>
+            {% endif %}
+          </td>
           <td>{{ item.quantity }}</td>
           <td>{{ format_money(item.unit_price_cents) }}</td>
           <td>{{ format_money(item.line_total_cents) }}</td>
