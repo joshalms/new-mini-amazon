@@ -23,8 +23,13 @@
         <dt class="col-sm-4">Member Since</dt>
         <dd class="col-sm-8">{{ user_info.created_at.strftime('%b %d, %Y') if user_info.created_at else '' }}</dd>
       </dl>
-      <div class="mt-4">
-        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('users.users_me') }}">My Account</a>
+      <div class="mt-4 d-flex flex-wrap align-items-center" style="gap: 0.5rem;">
+        {% if g.user and g.user.id == user_info.id %}
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('users.users_me') }}" style="margin-right: 0.25rem;">My Account</a>
+        {% endif %}
+        {% if is_seller %}
+        <a class="btn btn-primary btn-sm" href="{{ url_for('inventory.view_inventory', user_id=user_info.id) }}">View Inventory</a>
+        {% endif %}
       </div>
     </div>
   </div>
