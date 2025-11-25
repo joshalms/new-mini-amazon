@@ -1,37 +1,49 @@
-<!-- Container for products -->
-<table id="products-table" class="products-table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Price</th>
-            <th>Available</th>
-        </tr>
-    </thead>
-    <tbody id="products-body">
-    </tbody>
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Top Products</h1>
+
+<form id="top-k-form">
+    <label for="k">Number of products:</label>
+    <input type="number" name="k" id="k" min="1" value="1">
+    <button type="submit">Show Top Products</button>
+</form>
+
+<table id="products-table">
+    <tr>
+        <th>Product Name</th>
+        <th>Price</th>
+        <th>Available</th>
+    </tr>
 </table>
 
 <script>
 async function fetchTopProducts(k=1) {
     const response = await fetch(`/api/products/topk?k=${k}`);
     const products = await response.json();
-    const tbody = document.getElementById('products-body');
+    const table = document.getElementById('products-table');
 
-    // Clear old results
-    tbody.innerHTML = '';
+    // Clear old rows except the header
+    table.innerHTML = `
+        <tr>
+            <th>Product Name</th>
+            <th>Price</th>
+            <th>Available</th>
+        </tr>
+    `;
 
-    // Insert rows
-    products.forEach(p => {
+    products.forEach(product => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${p.name}</td>
-            <td>$${p.price}</td>
-            <td>${p.available ? 'Yes' : 'No'}</td>
+            <td>${product.name}</td>
+            <td>${product.price}</td>
+            <td>${product.available ? 'Yes' : 'No'}</td>
         `;
-        tbody.appendChild(row);
+        table.appendChild(row);
     });
 }
 
+// load default top products
 fetchTopProducts();
 
 document.getElementById('top-k-form').addEventListener('submit', (e) => {
@@ -40,3 +52,4 @@ document.getElementById('top-k-form').addEventListener('submit', (e) => {
     fetchTopProducts(k);
 });
 </script>
+{% endblock %}
