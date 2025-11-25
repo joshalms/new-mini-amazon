@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 720px; margin-top: 40px;">
+  <h2>Edit Product: {{ product.name }}</h2>
+
+  <form method="POST">
+    <div class="mb-3">
+      <label for="quantity" class="form-label">Quantity</label>
+      <input type="number" class="form-control" id="quantity" name="quantity" value="{{ inventory_item.quantity }}" required min="1">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Update Quantity</button>
+  </form>
+
+  <div class="mt-3">
+    <a href="{{ url_for('inventory.view_inventory', user_id=user_id) }}" class="btn btn-secondary">Back to Inventory</a>
+  </div>
+</div>
+{% endblock %}
