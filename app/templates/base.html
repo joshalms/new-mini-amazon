@@ -205,6 +205,17 @@
             <i class="fas fa-star"></i>Reviews
           </a>
         </li>
+        <li class="nav-item">
+          {% if g.user %}
+          <a class="nav-link" href="{{ url_for('cart.view_cart') }}">
+            <i class="fas fa-shopping-cart"></i>Cart
+          </a>
+          {% else %}
+          <a class="nav-link" href="{{ url_for('account.login', next=url_for('cart.view_cart')) }}">
+            <i class="fas fa-shopping-cart"></i>Cart
+          </a>
+          {% endif %}
+        </li>
         {% if g.user %}
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('users.users_search') }}">
