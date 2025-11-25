@@ -14,6 +14,7 @@
         <th>Product Name</th>
         <th>Price</th>
         <th>Available</th>
+        <th>Add to Cart</th>
     </tr>
 </table>
 
@@ -35,10 +36,17 @@ async function fetchTopProducts(k=5) {
     products.forEach(product => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${product.name}</td>
-            <td>${product.price}</td>
-            <td>${product.available ? 'Yes' : 'No'}</td>
-        `;
+    <td>${product.name}</td>
+    <td>${product.price}</td>
+    <td>${product.available ? 'Yes' : 'No'}</td>
+    <td>
+      ${product.available ? `
+        <form action="/cart/add/${product.id}" method="POST">
+          <input type="submit" value="Add to Cart" class="btn btn-sm btn-outline-primary"/>
+        </form>
+      ` : ''}
+    </td>
+`;
         table.appendChild(row);
     });
 }

@@ -27,6 +27,7 @@
       <th scope="col">Price</th>
       <th scope="col">Avg Rating</th>
       <th scope="col">Wishlist</th>
+      <th scope="col">Add to Cart</th>
     </tr>
   </thead>
   <tbody>
@@ -53,6 +54,16 @@
           <a href="{{ url_for('account.login') }}">Log in</a>
           {% endif %}
         </td>
+        <td>
+          {% if g.user %}
+            <form action="{{ url_for('cart.add_to_cart', product_id=product.id) }}" method="POST">
+              <input type="submit" value="Add to Cart" class="btn btn-sm btn-outline-primary"/>
+            </form>
+          {% else %}
+            <a href="{{ url_for('account.login', next=url_for('index')) }}">Log in</a>
+          {% endif %}
+        </td>
+      </tr>
       </tr>
     {% endfor %}
   </tbody>
