@@ -19,23 +19,24 @@ def get_or_create_cart(user_id):
 def get_cart_for_user(user_id):
     db = _db()
     rows = db.execute("""
-      SELECT ci.product_id, ci.quantity, p.name, p.price
-      FROM CartItem ci
-      JOIN Cart c ON ci.cart_id = c.id
-      LEFT JOIN Products p ON ci.product_id = p.id
-      WHERE c.user_id = :uid
-      ORDER BY ci.id
-    """, uid=user_id)
+        SELECT ci.product_id, ci.quantity, p.name, p.price
+        FROM cartitem ci
+        JOIN cart c ON ci.cart_id = c.id
+        LEFT JOIN products p ON ci.product_id = p.id
+        WHERE c.user_id = :uid
+        ORDER BY ci.id
+        """, uid=user_id)
     items = []
     for r in rows:
         pid, qty, name, price = r
         items.append({
             "product_id": pid,
-            "quantity": qty,
-            "name": name,
-            "price": float(price) if price is not None else None
-        })
+         "quantity": qty,
+         "name": name,
+         "price": float(price) if price is not None else None
+    })
     return items
+
 
 def add_item_to_cart(user_id, product_id, quantity=1):
     db = _db()
