@@ -166,9 +166,16 @@
           scheduleUpdate(item.product_id, input, lineEl, price);
         });
         removeBtn.addEventListener('click', () => {
-          input.value = 0;
-          scheduleUpdate(item.product_id, input, lineEl, price, /*immediate=*/true);
+            input.value = 0;
+
+            // Remove row immediately from DOM
+            tr.remove();
+            recomputeTotal();
+
+            // Call backend immediately
+            scheduleUpdate(item.product_id, input, lineEl, price, true);
         });
+
 
         // when typing number, debounce update
         input.addEventListener('input', () => {
@@ -271,7 +278,7 @@
             btn.innerText = originalText;
           } else {
             // Success - form will submit normally to show flash message
-            checkoutForm.submit();
+            window.location.href = `/orders/${data.order_id}`;
           }
         } catch (err) {
           showError('Network error during checkout');
