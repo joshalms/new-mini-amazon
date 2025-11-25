@@ -120,69 +120,169 @@ def remove_product_from_inventory(user_id, product_id):
     return {"message": "Product removed from inventory"}
 
 #ORDER VIEWING/FULFILLMENT FUNCTIONALITY
-def get_orders_for_seller(seller_id, item_query=None, seller_query=None, start_date=None, end_date=None, page=1, per_page=10):
-    params = {'seller_id': seller_id}
-    filters = []  # We'll use filters for SQL conditions only, not pagination
-
-    query = """
-        SELECT o.id AS order_id, o.created_at AS order_created_at, o.total_cents, 
-               SUM(oi.quantity) AS item_count, o.fulfilled, 
-               u.full_name AS buyer_name, u.address AS buyer_address
-        FROM orders o
-        JOIN order_items oi ON o.id = oi.order_id
-        JOIN users u ON o.buyer_id = u.id
-        WHERE oi.seller_id = :seller_id
+def get_orders_for_seller(
+    seller_id,
+    limit=10,
+    offset=0,
+    item_query=None,
+    seller_query=None,
+    start_date=None,
+    end_date=None,
+):
     """
+    Retrieve paginated orders for a seller with optional filters (item name, seller name, date range).
+    The function returns the orders with their line items and summary information.
+    """
+    try:
+        limit_val = int(limit)
+    except (TypeError, ValueError):
+        limit_val = 10
+    limit_val = max(1, min(50, limit_val))
 
-    if item_query:
-        query += " AND p.name ILIKE :item_query"
-        filters.append(('item_query', f"%{item_query}%"))
-    if seller_query:
-        query += " AND u.full_name ILIKE :seller_query"
-        filters.append(('seller_query', f"%{seller_query}%"))
+    try:
+        offset_val = int(offset)
+    except (TypeError, ValueError):
+        offset_val = 0
+    offset_val = max(0, offset_val)
+
+    # Build dynamic filters
+    conditions = ["oi.seller_id = :seller_id"]
+    params = {'seller_id': seller_id}
+
+    item_pattern = f"%{item_query.strip()}%" if item_query else None
+    seller_pattern = f"%{seller_query.strip()}%" if seller_query else None
+
     if start_date:
-        query += " AND o.created_at >= :start_date"
-        filters.append(('start_date', start_date))
+        conditions.append("o.created_at >= :start_date")
+        params['start_date'] = start_date
     if end_date:
-        query += " AND o.created_at <= :end_date"
-        filters.append(('end_date', end_date))
+        conditions.append("o.created_at <= :end_date")
+        params['end_date'] = end_date
+    if item_pattern:
+        conditions.append("p.name ILIKE :item_pattern")
+        params['item_pattern'] = item_pattern
+    if seller_pattern:
+        conditions.append("u.full_name ILIKE :seller_pattern")
+        params['seller_pattern'] = seller_pattern
 
-    query += " GROUP BY o.id, u.id ORDER BY o.created_at DESC"
+    where_clause = " AND ".join(conditions)
 
-    # Add pagination parameters directly to params
-    params['per_page'] = per_page
-    params['offset'] = (page - 1) * per_page
-
-    # Execute the query with pagination
-    with app.db.engine.begin() as conn:
-        result = conn.execute(text(query), {**params, **dict(filters)})
-        orders = result.fetchall()
-
-    # Separate query to count the total number of matching orders (without pagination)
-    count_query = """
+    # Count the total number of matching orders
+    total_rows = app.db.execute(
+        f"""
         SELECT COUNT(DISTINCT o.id)
         FROM orders o
-        JOIN order_items oi ON o.id = oi.order_id
-        JOIN users u ON o.buyer_id = u.id
-        WHERE oi.seller_id = :seller_id
-    """
+        JOIN order_items oi ON oi.order_id = o.id
+        JOIN products p ON p.id = oi.product_id
+        LEFT JOIN users u ON u.id = o.buyer_id
+        WHERE {where_clause}
+        """,
+        **params,
+    )
+    total_orders = total_rows[0][0] if total_rows else 0
+    if total_orders == 0:
+        return [], total_orders
 
-    # Apply the same filters used for pagination
-    if item_query:
-        count_query += " AND p.name ILIKE :item_query"
-    if seller_query:
-        count_query += " AND u.full_name ILIKE :seller_query"
-    if start_date:
-        count_query += " AND o.created_at >= :start_date"
-    if end_date:
-        count_query += " AND o.created_at <= :end_date"
+    # Main query to get order details, including aggregated item count and buyer info
+    order_rows = app.db.execute(
+        f"""
+        WITH filtered_line_items AS (
+            SELECT
+                o.id AS order_id,
+                o.created_at,
+                o.total_cents,
+                oi.id AS order_item_id,
+                oi.product_id,
+                p.name AS product_name,
+                oi.quantity,
+                oi.unit_price_cents,
+                (oi.quantity * oi.unit_price_cents)::BIGINT AS line_total_cents,
+                o.fulfilled,
+                oi.seller_id,
+                u.full_name AS buyer_name,
+                u.address AS buyer_address
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+            JOIN products p ON p.id = oi.product_id
+            LEFT JOIN users u ON u.id = o.buyer_id
+            WHERE {where_clause}
+        ),
+        order_summary AS (
+            SELECT
+                order_id,
+                MAX(created_at) AS order_created_at,
+                MAX(total_cents) AS total_cents,
+                SUM(quantity) AS item_count,  -- SUM(quantity) to get total item count per order
+                BOOL_AND(fulfilled) AS all_fulfilled
+            FROM filtered_line_items
+            GROUP BY order_id
+        ),
+        paged_orders AS (
+            SELECT order_id, order_created_at
+            FROM order_summary
+            ORDER BY order_created_at DESC, order_id DESC
+            LIMIT :limit OFFSET :offset
+        )
+        SELECT
+            po.order_id,
+            os.order_created_at,
+            os.total_cents,
+            os.item_count,
+            os.all_fulfilled,
+            fli.order_item_id,
+            fli.product_id,
+            fli.product_name,
+            fli.quantity,
+            fli.unit_price_cents,
+            fli.line_total_cents,
+            fli.fulfilled,
+            fli.seller_id,
+            fli.buyer_name,
+            fli.buyer_address
+        FROM paged_orders po
+        JOIN order_summary os ON os.order_id = po.order_id
+        JOIN filtered_line_items fli ON fli.order_id = po.order_id
+        ORDER BY os.order_created_at DESC, po.order_id DESC, fli.order_item_id
+        """,
+        **params,
+        limit=limit_val,
+        offset=offset_val,
+    )
 
-    # Get the count result for total orders
-    with app.db.engine.begin() as conn:
-        count_result = conn.execute(text(count_query), {**params, **dict(filters)})
-        total_orders = count_result.scalar()  # Get the total count
+    # Organize the fetched data into order structures
+    orders = []
+    current_order = None
+    for row in order_rows:
+        order_id = row[0]
+        if not current_order or current_order['order_id'] != order_id:
+            current_order = {
+                'order_id': order_id,
+                'order_created_at': row[1],
+                'total_cents': row[2],
+                'item_count': int(row[3]),  # item_count is now correctly summed
+                'fulfilled': bool(row[4]),
+                'buyer_name': row[13],
+                'buyer_address': row[14],
+                'line_items': [],
+            }
+            orders.append(current_order)
+
+        # Add line item details (does not affect item count, which is aggregated)
+        current_order['line_items'].append(
+            {
+                'order_item_id': row[5],
+                'product_id': row[6],
+                'product_name': row[7],
+                'quantity': row[8],  # This is the quantity of the specific line item
+                'unit_price_cents': row[9],
+                'line_total_cents': row[10],
+                'fulfilled': bool(row[11]),
+                'seller_id': row[12],
+            }
+        )
 
     return orders, total_orders
+
 
 def get_order_details(seller_id, order_id):
     query = """

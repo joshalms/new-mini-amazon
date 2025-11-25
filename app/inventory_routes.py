@@ -79,17 +79,22 @@ def view_orders(user_id):
     seller_query = request.args.get('seller', '')
     start_date = request.args.get('start', '')
     end_date = request.args.get('end', '')
-    page = int(request.args.get('page', 1))
-    per_page = int(request.args.get('per_page', 10))
+    page = int(request.args.get('page', 1))  # Default page is 1
+    per_page = int(request.args.get('per_page', 10))  # Default per_page is 10
 
+    # Convert start and end date to datetime objects
     start_date = datetime.strptime(start_date, '%Y-%m-%d') if start_date else None
     end_date = datetime.strptime(end_date, '%Y-%m-%d') if end_date else None
 
-    # Get the paginated orders and total count
-    orders, total_orders = get_orders_for_seller(user_id, item_query, seller_query, start_date, end_date, page, per_page)
+    # Calculate offset
+    offset = (page - 1) * per_page
 
-    # Calculate total pages for pagination
+    # Get the paginated orders and total count
+    orders, total_orders = get_orders_for_seller(user_id, per_page, offset, item_query, seller_query, start_date, end_date)
+
+    # Calculate total pages, with a cap of 10 pages
     total_pages = ceil(total_orders / per_page) if total_orders > 0 else 1
+    total_pages = min(total_pages, 10)  # Ensure max 10 pages
 
     return render_template(
         'seller-orders.html', 
