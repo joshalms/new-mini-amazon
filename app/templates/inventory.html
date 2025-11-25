@@ -38,5 +38,9 @@
   <div class="mt-4">
     <a href="{{ url_for('inventory.add_product', user_id=user_id) }}" class="btn btn-primary">Add New Product</a>
   </div>
+
+  <div class="mt-4">
+    <a href="{{ url_for('inventory.view_orders', user_id=user_id) }}" class="btn btn-primary">View Order History</a>
+  </div>
 </div>
 {% endblock %}
