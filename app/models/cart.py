@@ -2,11 +2,28 @@
 from flask import current_app
 from app.db import DB
 
+
+class CartError(RuntimeError):
+    """Raised when cart operations cannot be completed safely."""
+
+
 def _db():
     app = current_app._get_current_object()
     if hasattr(app, "db") and isinstance(app.db, DB):
         return app.db
     return DB(app)
+
+
+def _ensure_product_available(db, product_id):
+    """
+    Ensure the product exists and is marked available before inserting a new cart row.
+    """
+    rows = db.execute("SELECT available FROM Products WHERE id = :pid", pid=product_id)
+    if not rows:
+        raise CartError("Product does not exist.")
+    available = rows[0][0]
+    if available is not None and not bool(available):
+        raise CartError("Product is not available for purchase right now.")
 
 def get_or_create_cart(user_id):
     db = _db()
@@ -39,36 +56,61 @@ def get_cart_for_user(user_id):
 
 def add_item_to_cart(user_id, product_id, quantity=1):
     db = _db()
+    qty = int(quantity)
     cart_id = get_or_create_cart(user_id)
-    rows = db.execute("SELECT id, quantity FROM CartItem WHERE cart_id = :cid AND product_id = :pid", 
-                      cid=cart_id, pid=product_id)
+    rows = db.execute(
+        "SELECT id, quantity FROM CartItem WHERE cart_id = :cid AND product_id = :pid",
+        cid=cart_id,
+        pid=product_id,
+    )
     if rows:
         item_id, existing = rows[0]
-        new_q = existing + int(quantity)
+        new_q = existing + qty
         if new_q <= 0:
             db.execute("DELETE FROM CartItem WHERE id = :id", id=item_id)
         else:
             db.execute("UPDATE CartItem SET quantity = :q WHERE id = :id", q=new_q, id=item_id)
     else:
-        if int(quantity) > 0:
-            db.execute("INSERT INTO CartItem (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)",
-                       cid=cart_id, pid=product_id, q=quantity)
+        if qty > 0:
+            _ensure_product_available(db, product_id)
+            db.execute(
+                "INSERT INTO CartItem (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)",
+                cid=cart_id,
+                pid=product_id,
+                q=qty,
+            )
 
 def set_item_quantity(user_id, product_id, quantity=0):
     db = _db()
+    qty = int(quantity)
     cart_id = get_or_create_cart(user_id)
-    if int(quantity) <= 0:
-        db.execute("DELETE FROM CartItem WHERE cart_id = :cid AND product_id = :pid", 
-                  cid=cart_id, pid=product_id)
+    if qty <= 0:
+        db.execute(
+            "DELETE FROM CartItem WHERE cart_id = :cid AND product_id = :pid",
+            cid=cart_id,
+            pid=product_id,
+        )
         return
-    rows = db.execute("SELECT id FROM CartItem WHERE cart_id = :cid AND product_id = :pid", 
-                      cid=cart_id, pid=product_id)
+    rows = db.execute(
+        "SELECT id FROM CartItem WHERE cart_id = :cid AND product_id = :pid",
+        cid=cart_id,
+        pid=product_id,
+    )
     if rows:
-        db.execute("UPDATE CartItem SET quantity = :q WHERE cart_id = :cid AND product_id = :pid", 
-                  q=quantity, cid=cart_id, pid=product_id)
+        db.execute(
+            "UPDATE CartItem SET quantity = :q WHERE cart_id = :cid AND product_id = :pid",
+            q=qty,
+            cid=cart_id,
+            pid=product_id,
+        )
     else:
-        db.execute("INSERT INTO CartItem (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)", 
-                  cid=cart_id, pid=product_id, q=quantity)
+        _ensure_product_available(db, product_id)
+        db.execute(
+            "INSERT INTO CartItem (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)",
+            cid=cart_id,
+            pid=product_id,
+            q=qty,
+        )
 
 def clear_cart(user_id):
     db = _db()
