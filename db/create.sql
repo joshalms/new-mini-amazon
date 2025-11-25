@@ -93,15 +93,15 @@ create table seller_review (
     constraint unique_user_seller unique (user_id, seller_id),
 );
 
+CREATE TABLE cart (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE cartitem (
     id SERIAL PRIMARY KEY,
     cart_id INT NOT NULL REFERENCES cart(id) ON DELETE CASCADE,
     product_id INT NOT NULL REFERENCES products(id),
     quantity INT NOT NULL CHECK (quantity > 0)
-);
-
-CREATE TABLE cart (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
