@@ -1,47 +1,42 @@
-{% extends "base.html" %}
-
-{% block content %}
-<h1>Top Products</h1>
-
 <!-- Container for products -->
-<div id="products-container" class="products-container"></div>
-
-<!-- Form to choose number of products -->
-<form id="top-k-form">
-    <label for="k">Number of products:</label>
-    <input type="number" name="k" id="k" min="1" value="1">
-    <button type="submit">Show Top Products</button>
-</form>
+<table id="products-table" class="products-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Available</th>
+        </tr>
+    </thead>
+    <tbody id="products-body">
+    </tbody>
+</table>
 
 <script>
-    async function fetchTopProducts(k=1) {
-        const response = await fetch(`/api/products/topk?k=${k}`);
-        const products = await response.json();
-        const container = document.getElementById('products-container');
+async function fetchTopProducts(k=1) {
+    const response = await fetch(`/api/products/topk?k=${k}`);
+    const products = await response.json();
+    const tbody = document.getElementById('products-body');
 
-        // Clear previous products
-        container.innerHTML = '';
+    // Clear old results
+    tbody.innerHTML = '';
 
-        products.forEach(product => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-                <h2>${product.name}</h2>
-                <p>Price: $${product.price}</p>
-                <p>Available: ${product.available ? 'Yes' : 'No'}</p>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    // Fetch default top 5 on page load
-    fetchTopProducts();
-
-    // Handle form submission
-    document.getElementById('top-k-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const k = document.getElementById('k').value;
-        fetchTopProducts(k);
+    // Insert rows
+    products.forEach(p => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${p.name}</td>
+            <td>$${p.price}</td>
+            <td>${p.available ? 'Yes' : 'No'}</td>
+        `;
+        tbody.appendChild(row);
     });
+}
+
+fetchTopProducts();
+
+document.getElementById('top-k-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const k = document.getElementById('k').value;
+    fetchTopProducts(k);
+});
 </script>
-{% endblock %}

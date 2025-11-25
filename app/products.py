@@ -19,7 +19,7 @@ def top_k_products():
     Example: /api/products/topk?k=5
     """
     try:
-        k = request.args.get('k', default=1, type=int)
+        k = request.args.get('k', default=5, type=int)
         if k < 1:
             k = 1
         products = Product.get_top_k_expensive(k)
