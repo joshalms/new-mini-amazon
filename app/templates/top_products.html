@@ -9,7 +9,7 @@
     <button type="submit">Show Top Products</button>
 </form>
 
-<table id="products-table">
+<table id="products-table" class="product-table">
     <tr>
         <th>Product Name</th>
         <th>Price</th>
@@ -18,12 +18,12 @@
 </table>
 
 <script>
-async function fetchTopProducts(k=1) {
+async function fetchTopProducts(k=5) {
     const response = await fetch(`/api/products/topk?k=${k}`);
     const products = await response.json();
     const table = document.getElementById('products-table');
 
-    // Clear old rows except the header
+    // Reset header row
     table.innerHTML = `
         <tr>
             <th>Product Name</th>
