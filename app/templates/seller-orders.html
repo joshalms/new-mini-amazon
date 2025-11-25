@@ -50,28 +50,33 @@
 
   {% if total_pages > 1 %}
   <nav aria-label="Order pagination">
-    <ul class="pagination">
+    <ul class="pagination justify-content-center mt-4">
+      {% set prev_page = page - 1 %}
+      {% set next_page = page + 1 %}
+      
       <li class="page-item {% if page <= 1 %}disabled{% endif %}">
         {% if page <= 1 %}
         <span class="page-link">Previous</span>
         {% else %}
-        <a class="page-link" href="{{ url_for('inventory.view_orders', user_id=user_id, page=page-1, per_page=per_page, item=item_query, start=start_filter, end=end_filter) }}">Previous</a>
+        <a class="page-link" href="{{ url_for('inventory.view_orders', user_id=user_id, page=prev_page, per_page=per_page, item=item_query, start=start_filter, end=end_filter) }}">Previous</a>
         {% endif %}
       </li>
-      <li class="page-item disabled">
+      
+      <li class="page-item active">
         <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
       </li>
+      
       <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
         {% if page >= total_pages %}
         <span class="page-link">Next</span>
         {% else %}
-        <a class="page-link" href="{{ url_for('inventory.view_orders', user_id=user_id, page=page+1, per_page=per_page, item=item_query, start=start_filter, end=end_filter) }}">Next</a>
+        <a class="page-link" href="{{ url_for('inventory.view_orders', user_id=user_id, page=next_page, per_page=per_page, item=item_query, start=start_filter, end=end_filter) }}">Next</a>
         {% endif %}
       </li>
     </ul>
   </nav>
-  
-  {% endif %}
+{% endif %}
+
   {% else %}
   <p class="mt-3">You have not received any orders yet.</p>
   {% endif %}

@@ -1,7 +1,8 @@
 from flask import current_app as app
 from sqlalchemy import text
 
-def get_inventory_for_user(user_id):
+def get_inventory_for_user(user_id, page=1, per_page=10):
+    offset = (page - 1) * per_page
     rows = app.db.execute("""
         SELECT 
             i.product_id,
@@ -13,7 +14,8 @@ def get_inventory_for_user(user_id):
         JOIN Products p ON i.product_id = p.id
         WHERE i.user_id = :uid
         ORDER BY p.name
-    """, uid=user_id)
+        LIMIT :per_page OFFSET :offset
+    """, uid=user_id, per_page=per_page, offset=offset)
     
     items = []
     for r in rows:
@@ -25,7 +27,16 @@ def get_inventory_for_user(user_id):
             "price": float(price) if price is not None else None,
             "available": bool(available)
         })
-    return items
+    
+    total_rows = app.db.execute("""
+        SELECT COUNT(*) FROM Inventory WHERE user_id = :uid
+    """, uid=user_id)
+    
+    total_count = total_rows[0][0] 
+    
+    total_pages = (total_count // per_page) + (1 if total_count % per_page > 0 else 0)
+    
+    return items, total_pages
 
 def get_product_by_id(product_id):
     with app.db.engine.begin() as conn:
@@ -56,7 +67,6 @@ def get_inventory_item(user_id, product_id):
         return None
 
 #MANIPULATE INVENTORY FUNCTIONALITY
-
 def add_product_to_inventory(user_id, product_id, quantity):
     with app.db.engine.begin() as conn:
         result = conn.execute(text("""
@@ -145,7 +155,6 @@ def get_orders_for_seller(
         offset_val = 0
     offset_val = max(0, offset_val)
 
-    # Build dynamic filters
     conditions = ["oi.seller_id = :seller_id"]
     params = {'seller_id': seller_id}
 
@@ -167,7 +176,6 @@ def get_orders_for_seller(
 
     where_clause = " AND ".join(conditions)
 
-    # Count the total number of matching orders
     total_rows = app.db.execute(
         f"""
         SELECT COUNT(DISTINCT o.id)
@@ -183,7 +191,6 @@ def get_orders_for_seller(
     if total_orders == 0:
         return [], total_orders
 
-    # Main query to get order details, including aggregated item count and buyer info
     order_rows = app.db.execute(
         f"""
         WITH filtered_line_items AS (
@@ -249,7 +256,6 @@ def get_orders_for_seller(
         offset=offset_val,
     )
 
-    # Organize the fetched data into order structures
     orders = []
     current_order = None
     for row in order_rows:
@@ -259,7 +265,7 @@ def get_orders_for_seller(
                 'order_id': order_id,
                 'order_created_at': row[1],
                 'total_cents': row[2],
-                'item_count': int(row[3]),  # item_count is now correctly summed
+                'item_count': int(row[3]),
                 'fulfilled': bool(row[4]),
                 'buyer_name': row[13],
                 'buyer_address': row[14],
@@ -267,13 +273,12 @@ def get_orders_for_seller(
             }
             orders.append(current_order)
 
-        # Add line item details (does not affect item count, which is aggregated)
         current_order['line_items'].append(
             {
                 'order_item_id': row[5],
                 'product_id': row[6],
                 'product_name': row[7],
-                'quantity': row[8],  # This is the quantity of the specific line item
+                'quantity': row[8],  
                 'unit_price_cents': row[9],
                 'line_total_cents': row[10],
                 'fulfilled': bool(row[11]),
