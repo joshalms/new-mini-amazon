@@ -21,11 +21,8 @@ def get_cart_for_user(user_id):
     db = _db()
     rows = db.execute("""
         SELECT ci.product_id, ci.quantity, p.name, p.price
-        -- CHANGED: cartitem → "CartItem"
         FROM "CartItem" ci
-        -- CHANGED: cart → "Cart"
         JOIN "Cart" c ON ci.cart_id = c.id
-        -- CHANGED: products → "Products"
         LEFT JOIN "Products" p ON ci.product_id = p.id
         WHERE c.user_id = :uid
         ORDER BY ci.id
