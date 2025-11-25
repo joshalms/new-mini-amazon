@@ -9,21 +9,30 @@ def _db():
 
 def get_or_create_cart(user_id):
     db = _db()
-    # CHANGED: Cart → "Cart"
-    rows = db.execute('SELECT id FROM "Cart" WHERE user_id = :uid', uid=user_id)
+
+    # CHANGED: "Cart" → cart
+    rows = db.execute("SELECT id FROM cart WHERE user_id = :uid", uid=user_id)
+
     if rows:
         return rows[0][0]
-    # CHANGED: Cart → "Cart"
-    inserted = db.execute('INSERT INTO "Cart" (user_id) VALUES (:uid) RETURNING id', uid=user_id)
+
+    # CHANGED: "Cart" → cart
+    inserted = db.execute(
+        "INSERT INTO cart (user_id) VALUES (:uid) RETURNING id",
+        uid=user_id
+    )
     return inserted[0][0]
+
 
 def get_cart_for_user(user_id):
     db = _db()
+
+    # CHANGED: cartitem, cart, products (all lowercase)
     rows = db.execute("""
         SELECT ci.product_id, ci.quantity, p.name, p.price
-        FROM "CartItem" ci
-        JOIN "Cart" c ON ci.cart_id = c.id
-        LEFT JOIN "Products" p ON ci.product_id = p.id
+        FROM cartitem ci
+        JOIN cart c ON ci.cart_id = c.id
+        LEFT JOIN products p ON ci.product_id = p.id
         WHERE c.user_id = :uid
         ORDER BY ci.id
     """, uid=user_id)
@@ -44,24 +53,33 @@ def add_item_to_cart(user_id, product_id, quantity=1):
     db = _db()
     cart_id = get_or_create_cart(user_id)
 
-    # CHANGED: CartItem → "CartItem"
-    rows = db.execute('SELECT id, quantity FROM "CartItem" WHERE cart_id = :cid AND product_id = :pid',
-                      cid=cart_id, pid=product_id)
+    # CHANGED: "CartItem" → cartitem
+    rows = db.execute(
+        "SELECT id, quantity FROM cartitem WHERE cart_id = :cid AND product_id = :pid",
+        cid=cart_id, pid=product_id
+    )
 
     if rows:
         item_id, existing = rows[0]
         new_q = existing + int(quantity)
+
         if new_q <= 0:
-            # CHANGED: CartItem → "CartItem"
-            db.execute('DELETE FROM "CartItem" WHERE id = :id', id=item_id)
+            # CHANGED: "CartItem" → cartitem
+            db.execute("DELETE FROM cartitem WHERE id = :id", id=item_id)
         else:
-            # CHANGED: CartItem → "CartItem"
-            db.execute('UPDATE "CartItem" SET quantity = :q WHERE id = :id', q=new_q, id=item_id)
+            # CHANGED: "CartItem" → cartitem
+            db.execute(
+                "UPDATE cartitem SET quantity = :q WHERE id = :id",
+                q=new_q, id=item_id
+            )
     else:
         if int(quantity) > 0:
-            # CHANGED: CartItem → "CartItem"
-            db.execute('INSERT INTO "CartItem" (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)',
-                       cid=cart_id, pid=product_id, q=quantity)
+            # CHANGED: "CartItem" → cartitem
+            db.execute(
+                "INSERT INTO cartitem (cart_id, product_id, quantity) "
+                "VALUES (:cid, :pid, :q)",
+                cid=cart_id, pid=product_id, q=quantity
+            )
 
 
 def set_item_quantity(user_id, product_id, quantity=0):
@@ -69,48 +87,59 @@ def set_item_quantity(user_id, product_id, quantity=0):
     cart_id = get_or_create_cart(user_id)
 
     if int(quantity) <= 0:
-        # CHANGED: CartItem → "CartItem"
-        db.execute('DELETE FROM "CartItem" WHERE cart_id = :cid AND product_id = :pid',
-                   cid=cart_id, pid=product_id)
+        # CHANGED: "CartItem" → cartitem
+        db.execute(
+            "DELETE FROM cartitem WHERE cart_id = :cid AND product_id = :pid",
+            cid=cart_id, pid=product_id
+        )
         return
 
-    # CHANGED: CartItem → "CartItem"
-    rows = db.execute('SELECT id FROM "CartItem" WHERE cart_id = :cid AND product_id = :pid',
-                      cid=cart_id, pid=product_id)
+    # CHANGED: "CartItem" → cartitem
+    rows = db.execute(
+        "SELECT id FROM cartitem WHERE cart_id = :cid AND product_id = :pid",
+        cid=cart_id, pid=product_id
+    )
 
     if rows:
-        # CHANGED: CartItem → "CartItem"
-        db.execute('UPDATE "CartItem" SET quantity = :q WHERE cart_id = :cid AND product_id = :pid',
-                   q=quantity, cid=cart_id, pid=product_id)
+        # CHANGED: "CartItem" → cartitem
+        db.execute(
+            "UPDATE cartitem SET quantity = :q "
+            "WHERE cart_id = :cid AND product_id = :pid",
+            q=quantity, cid=cart_id, pid=product_id
+        )
     else:
-        # CHANGED: CartItem → "CartItem"
-        db.execute('INSERT INTO "CartItem" (cart_id, product_id, quantity) VALUES (:cid, :pid, :q)',
-                   cid=cart_id, pid=product_id, q=quantity)
+        # CHANGED: "CartItem" → cartitem
+        db.execute(
+            "INSERT INTO cartitem (cart_id, product_id, quantity) "
+            "VALUES (:cid, :pid, :q)",
+            cid=cart_id, pid=product_id, q=quantity
+        )
 
 
 def clear_cart(user_id):
     db = _db()
-    # CHANGED: CartItem → "CartItem", Cart → "Cart"
-    db.execute('DELETE FROM "CartItem" WHERE cart_id = (SELECT id FROM "Cart" WHERE user_id = :uid)',
-               uid=user_id)
+    # CHANGED: "CartItem" → cartitem; "Cart" → cart
+    db.execute(
+        "DELETE FROM cartitem WHERE cart_id = (SELECT id FROM cart WHERE user_id = :uid)",
+        uid=user_id
+    )
 
 
 def submit_order(user_id):
     """
-    Submit cart as order. Validates inventory and balance, creates order,
-    updates balances and inventories, then clears cart.
+    Submit cart as order.
     """
     from app.models.user import User
     from sqlalchemy import text
 
     db = _db()
 
-    # CHANGED: CartItem, Cart, Products → quoted forms
+    # CHANGED: CartItem → cartitem, Cart → cart, Products → products
     cart_items = db.execute("""
         SELECT ci.product_id, ci.quantity, p.price, p.name
-        FROM "CartItem" ci
-        JOIN "Cart" c ON ci.cart_id = c.id
-        JOIN "Products" p ON ci.product_id = p.id
+        FROM cartitem ci
+        JOIN cart c ON ci.cart_id = c.id
+        JOIN products p ON ci.product_id = p.id
         WHERE c.user_id = :uid
         ORDER BY ci.id
     """, uid=user_id)
@@ -127,17 +156,19 @@ def submit_order(user_id):
         if price is None:
             return None, f"Product '{name}' has no price"
 
-        # CHANGED: Inventory → "Inventory"
+        # CHANGED: Inventory → inventory
         seller_rows = db.execute("""
-            SELECT user_id, quantity 
-            FROM "Inventory"
-            WHERE product_id = :pid AND quantity >= :qty AND user_id != :buyer_id
+            SELECT user_id, quantity
+            FROM inventory
+            WHERE product_id = :pid
+              AND quantity >= :qty
+              AND user_id != :buyer_id
             ORDER BY quantity DESC
             LIMIT 1
         """, pid=product_id, qty=quantity, buyer_id=user_id)
 
         if not seller_rows:
-            return None, f"Product '{name}' has no seller with sufficient inventory (need {quantity})"
+            return None, f"No seller with sufficient inventory for '{name}'"
 
         seller_id = seller_rows[0][0]
 
@@ -145,47 +176,47 @@ def submit_order(user_id):
         total_cents += unit_price_cents * quantity
 
         items_to_order.append({
-            'product_id': product_id,
-            'seller_id': seller_id,
-            'quantity': quantity,
-            'unit_price_cents': unit_price_cents,
-            'name': name
+            "product_id": product_id,
+            "seller_id": seller_id,
+            "quantity": quantity,
+            "unit_price_cents": unit_price_cents,
+            "name": name,
         })
 
     buyer_balance = User.get_balance(user_id)
     if buyer_balance < total_cents:
-        return None, f"Insufficient balance."
+        return None, "Insufficient balance."
 
     try:
         with db.engine.begin() as conn:
 
-            # CHANGED: orders → "orders"
+            # CHANGED: "orders" → orders
             order_result = conn.execute(
                 text("""
-                    INSERT INTO "orders" (buyer_id, total_cents, fulfilled)
+                    INSERT INTO orders (buyer_id, total_cents, fulfilled)
                     VALUES (:buyer_id, :total_cents, FALSE)
                     RETURNING id
                 """),
-                {'buyer_id': user_id, 'total_cents': total_cents}
+                {"buyer_id": user_id, "total_cents": total_cents}
             )
             order_id = order_result.fetchone()[0]
 
             for item in items_to_order:
 
-                # CHANGED: order_items → "order_items"
+                # CHANGED: "order_items" → order_items
                 conn.execute(
                     text("""
-                        INSERT INTO "order_items" 
+                        INSERT INTO order_items
                         (order_id, product_id, seller_id, quantity, unit_price_cents)
                         VALUES (:order_id, :product_id, :seller_id, :quantity, :unit_price_cents)
                     """),
                     item | {"order_id": order_id}
                 )
 
-                # CHANGED: Inventory → "Inventory"
+                # CHANGED: "Inventory" → inventory
                 conn.execute(
                     text("""
-                        UPDATE "Inventory"
+                        UPDATE inventory
                         SET quantity = quantity - :qty
                         WHERE user_id = :seller_id AND product_id = :product_id
                     """),
@@ -196,10 +227,9 @@ def submit_order(user_id):
                     }
                 )
 
-            # Clear cart
-            # CHANGED: CartItem → "CartItem", Cart → "Cart"
+            # CHANGED: "CartItem" → cartitem; "Cart" → cart
             conn.execute(
-                text('DELETE FROM "CartItem" WHERE cart_id = (SELECT id FROM "Cart" WHERE user_id = :uid)'),
+                text("DELETE FROM cartitem WHERE cart_id = (SELECT id FROM cart WHERE user_id = :uid)"),
                 {"uid": user_id}
             )
 
