@@ -3,6 +3,35 @@
 {% block content %}
 <div class="container" style="max-width: 720px; margin-top: 40px;">
   <h2>My Purchases</h2>
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <form class="form-row" method="get">
+        <div class="form-group col-md-6">
+          <label for="item-filter">Item name</label>
+          <input id="item-filter" name="item" type="text" class="form-control" placeholder="Search products" value="{{ item_query }}">
+        </div>
+        <div class="form-group col-md-6">
+          <label for="seller-filter">Seller (ID or name)</label>
+          <input id="seller-filter" name="seller" type="text" class="form-control" placeholder="e.g. 42 or Alice" value="{{ seller_query }}">
+        </div>
+        <div class="form-group col-md-6">
+          <label for="start-filter">Start date</label>
+          <input id="start-filter" name="start" type="date" class="form-control" value="{{ start_filter }}">
+        </div>
+        <div class="form-group col-md-6">
+          <label for="end-filter">End date</label>
+          <input id="end-filter" name="end" type="date" class="form-control" value="{{ end_filter }}">
+        </div>
+        <div class="form-group col-md-6 mb-0 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary mr-2">Apply filters</button>
+          <a class="btn btn-link" href="{{ url_for('account.account_purchases') }}">Reset</a>
+        </div>
+      </form>
+      {% if filters_applied %}
+      <p class="text-muted small mb-0 mt-2">Filters applied. Showing only matching orders.</p>
+      {% endif %}
+    </div>
+  </div>
   {% if total_orders %}
   <p class="text-muted mb-1">
     Showing {{ orders|length }} of {{ total_orders }} orders.
@@ -44,6 +73,9 @@
                 <li>
                   {{ line.quantity }} × {{ line.product_name }}
                   (<strong>{{ format_money(line.line_total_cents) }}</strong>)
+                  {% if line.seller_id %}
+                  <span class="text-muted small ml-1">Seller {{ line.seller_name or ('#' ~ line.seller_id) }}</span>
+                  {% endif %}
                   {% if not line.fulfilled %}
                   <span class="badge badge-light">Pending</span>
                   {% endif %}
@@ -68,7 +100,7 @@
         {% if page <= 1 %}
         <span class="page-link">Previous</span>
         {% else %}
-        <a class="page-link" href="{{ url_for('account.account_purchases', page=page-1, per_page=per_page) }}">Previous</a>
+        <a class="page-link" href="{{ url_for('account.account_purchases', page=page-1, per_page=per_page, item=item_query, seller=seller_query, start=start_filter, end=end_filter) }}">Previous</a>
         {% endif %}
       </li>
       <li class="page-item disabled">
@@ -78,7 +110,7 @@
         {% if page >= total_pages %}
         <span class="page-link">Next</span>
         {% else %}
-        <a class="page-link" href="{{ url_for('account.account_purchases', page=page+1, per_page=per_page) }}">Next</a>
+        <a class="page-link" href="{{ url_for('account.account_purchases', page=page+1, per_page=per_page, item=item_query, seller=seller_query, start=start_filter, end=end_filter) }}">Next</a>
         {% endif %}
       </li>
     </ul>

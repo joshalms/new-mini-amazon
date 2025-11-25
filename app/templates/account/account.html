@@ -1,36 +1,59 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container" style="max-width: 640px; margin-top: 40px;">
-  <h2>Your Account</h2>
-  <p><strong>Account #:</strong> {{ user.id }}</p>
-  <p><strong>Name:</strong> {{ user.full_name }}</p>
-  <p><strong>Email:</strong> {{ user.email }}</p>
-  <p><strong>Address:</strong> {{ user.address }}</p>
-  <p><strong>Current Balance:</strong> {{ format_money(balance_cents) }}</p>
-
-  <div class="list-group mt-4">
-    <a class="list-group-item list-group-item-action" href="{{ url_for('account.account_edit') }}">
-      Update profile details
-    </a>
-    <a class="list-group-item list-group-item-action" href="{{ url_for('account.account_balance') }}">
-      Manage balance &amp; view transactions
-    </a>
-    <a class="list-group-item list-group-item-action" href="{{ url_for('account.account_purchases') }}">
-      View purchase history
-    </a>
-    <a class="list-group-item list-group-item-action" href="{{ url_for('users.users_search') }}">
-      Find other users
-    </a>
-    <a class="list-group-item list-group-item-action" href="{{ url_for('account.public_profile', user_id=user.id) }}">
-      View public profile
-    </a>
-    <a class="list-group-item list-group-item-action" href="{{ url_for('account.seller_reviews_page') }}">
-      Lookup seller reviews
-    </a>
-    <a class="list-group-item list-group-item-action" href="{{ url_for('inventory.view_inventory', user_id=user.id) }}">
-      View seller inventory
-    </a>
+<div class="container py-4" style="max-width: 900px;">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start flex-wrap">
+        <div>
+          <h3 class="card-title mb-1">Account Settings</h3>
+          <p class="text-muted mb-3">Account #{{ user.id }} • Joined {{ user.created_at.strftime('%b %d, %Y') if user.created_at else '' }}</p>
+          <ul class="list-unstyled small mb-0">
+            <li><strong>Email:</strong> {{ user.email }}</li>
+            <li><strong>Name:</strong> {{ user.full_name }}</li>
+            <li><strong>Address:</strong> {{ user.address }}</li>
+          </ul>
+        </div>
+        <div class="text-right">
+          <span class="text-muted text-uppercase small">Current Balance</span>
+          <h2 class="mb-0 text-success">{{ format_money(balance_cents) }}</h2>
+          <small class="text-muted">({{ balance_cents }}¢)</small>
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-6 mb-4">
+          <div class="border rounded p-3 h-100">
+            <h5 class="mb-3">Profile &amp; Security</h5>
+            <p class="text-muted small">Keep your account details up to date.</p>
+            <div class="d-flex flex-column">
+              <a class="btn btn-primary mb-2" href="{{ url_for('account.account_edit') }}">Edit profile &amp; password</a>
+              <a class="btn btn-outline-secondary mb-2" href="{{ url_for('account.account_balance') }}">Manage balance</a>
+              <a class="btn btn-outline-secondary" href="{{ url_for('account.public_profile', user_id=user.id) }}">View public profile</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-4">
+          <div class="border rounded p-3 h-100 bg-light">
+            <h5 class="mb-3">Quick links</h5>
+            <div class="list-group shadow-sm">
+              <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('account.account_purchases') }}">
+                Purchase history
+                <i class="fa fa-chevron-right small"></i>
+              </a>
+              <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('users.users_search') }}">
+                Find other users
+                <i class="fa fa-chevron-right small"></i>
+              </a>
+              <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('inventory.view_inventory', user_id=user.id) }}">
+                Seller inventory
+                <i class="fa fa-chevron-right small"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

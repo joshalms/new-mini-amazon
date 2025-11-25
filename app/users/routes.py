@@ -709,6 +709,10 @@ def api_balance_history():
 @bp.route('/api/users/<int:user_id>/purchases', methods=['GET'])
 def api_user_purchases(user_id: int):
     """Return paginated purchases for a buyer (Spec §3.1)."""
+    requester_id = _require_auth()
+    if requester_id != user_id:
+        return jsonify({'error': 'not authorized for this purchase history'}), 403
+
     try:
         page = max(1, int(request.args.get('page', '1')))
     except ValueError:
@@ -827,7 +831,15 @@ def users_balance_history():
 @bp.route('/users/<int:user_id>/purchases', methods=['GET'])
 def users_purchases(user_id: int):
     """Render filtered, paginated purchase history for a user (Spec §3.1 & §4.1)."""
-    viewer = g.get('user')
+    redirect_response = _ensure_login_for_page()
+    if redirect_response:
+        return redirect_response
+
+    viewer = g.user
+    if viewer.id != user_id:
+        flash('You can only view your own purchase history.', 'error')
+        return redirect(url_for('account.account_purchases'))
+
     user_row = _get_user_basic(user_id)
     if not user_row:
         abort(404)
@@ -942,9 +954,16 @@ LIMIT :limit
 @bp.route('/orders/<int:order_id>', methods=['GET'])
 def order_detail(order_id: int):
     """Render a detailed order view with fulfillment info (Spec §3.2 & §4.2)."""
+    redirect_response = _ensure_login_for_page()
+    if redirect_response:
+        return redirect_response
+
     detail = _get_order_detail(order_id)
     if not detail:
         abort(404)
+    if detail['buyer']['id'] != g.user.id:
+        flash('You can only view your own orders.', 'error')
+        return redirect(url_for('account.account_purchases'))
     return render_template('users/order_detail.html', order=detail)
 
 

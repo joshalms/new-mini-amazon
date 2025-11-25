@@ -1,5 +1,6 @@
 from functools import wraps
 import math
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from flask import (
@@ -79,6 +80,15 @@ def _serialize_datetime(value):
     return value
 
 
+def _parse_date(raw_value):
+    if not raw_value:
+        return None
+    try:
+        return datetime.strptime(raw_value, '%Y-%m-%d')
+    except (TypeError, ValueError):
+        return None
+
+
 def _serialize_order(order):
     return {
         'order_id': order['order_id'],
@@ -94,6 +104,8 @@ def _serialize_order(order):
                 'unit_price_cents': item['unit_price_cents'],
                 'line_total_cents': item['line_total_cents'],
                 'fulfilled': item['fulfilled'],
+                'seller_id': item.get('seller_id'),
+                'seller_name': item.get('seller_name'),
             }
             for item in order.get('line_items', [])
         ],
@@ -390,7 +402,35 @@ def account_purchases():
         maximum=25,
     )
     offset = (page - 1) * per_page
-    result = purchases.get_purchases_for_user(g.user.id, limit=per_page, offset=offset)
+
+    item_query = (request.args.get('item') or '').strip()
+    seller_raw = (request.args.get('seller') or '').strip()
+    start_at = _parse_date(request.args.get('start'))
+    end_at = _parse_date(request.args.get('end'))
+    end_before = end_at + timedelta(days=1) if end_at else None
+
+    seller_id = None
+    seller_name = None
+    if seller_raw:
+        try:
+            seller_id = int(seller_raw)
+        except ValueError:
+            seller_name = seller_raw
+
+    filter_kwargs = {
+        'item_query': item_query or None,
+        'seller_id': seller_id,
+        'seller_name': seller_name,
+        'start_at': start_at,
+        'end_before': end_before,
+    }
+
+    result = purchases.get_purchases_for_user(
+        g.user.id,
+        limit=per_page,
+        offset=offset,
+        **filter_kwargs,
+    )
     total_orders = result['total_orders']
     total_pages = max(1, math.ceil(total_orders / per_page)) if total_orders else 1
 
@@ -400,7 +440,12 @@ def account_purchases():
     if total_orders and offset >= total_orders:
         page = total_pages
         offset = (page - 1) * per_page
-        result = purchases.get_purchases_for_user(g.user.id, limit=per_page, offset=offset)
+        result = purchases.get_purchases_for_user(
+            g.user.id,
+            limit=per_page,
+            offset=offset,
+            **filter_kwargs,
+        )
 
     return render_template(
         'account/purchases.html',
@@ -409,6 +454,11 @@ def account_purchases():
         per_page=per_page,
         total_orders=total_orders,
         total_pages=total_pages,
+        item_query=item_query,
+        seller_query=seller_raw,
+        start_filter=request.args.get('start', ''),
+        end_filter=request.args.get('end', ''),
+        filters_applied=bool(item_query or seller_raw or start_at or end_at),
     )
 
 
@@ -430,6 +480,12 @@ def order_detail(order_id):
 @bp.route('/api/users/<int:user_id>/purchases')
 def api_user_purchases(user_id):
     """Public API that returns paginated orders for a user."""
+    requester = getattr(g, 'user', None)
+    if requester is None:
+        return jsonify({'error': 'authentication required'}), 401
+    if requester.id != user_id:
+        return jsonify({'error': 'not authorized for this purchase history'}), 403
+
     user = User.get(user_id)
     if user is None:
         return jsonify({'error': 'user not found'}), 404
@@ -441,7 +497,35 @@ def api_user_purchases(user_id):
         maximum=50,
     )
     offset = (page - 1) * per_page
-    result = purchases.get_purchases_for_user(user_id, limit=per_page, offset=offset)
+
+    item_query = (request.args.get('item') or '').strip()
+    seller_raw = (request.args.get('seller') or '').strip()
+    start_at = _parse_date(request.args.get('start'))
+    end_at = _parse_date(request.args.get('end'))
+    end_before = end_at + timedelta(days=1) if end_at else None
+
+    seller_id = None
+    seller_name = None
+    if seller_raw:
+        try:
+            seller_id = int(seller_raw)
+        except ValueError:
+            seller_name = seller_raw
+
+    filter_kwargs = {
+        'item_query': item_query or None,
+        'seller_id': seller_id,
+        'seller_name': seller_name,
+        'start_at': start_at,
+        'end_before': end_before,
+    }
+
+    result = purchases.get_purchases_for_user(
+        user_id,
+        limit=per_page,
+        offset=offset,
+        **filter_kwargs,
+    )
     total_orders = result['total_orders']
     total_pages = max(1, math.ceil(total_orders / per_page)) if total_orders else 1
 
@@ -451,7 +535,12 @@ def api_user_purchases(user_id):
     if total_orders and offset >= total_orders:
         page = total_pages
         offset = (page - 1) * per_page
-        result = purchases.get_purchases_for_user(user_id, limit=per_page, offset=offset)
+        result = purchases.get_purchases_for_user(
+            user_id,
+            limit=per_page,
+            offset=offset,
+            **filter_kwargs,
+        )
 
     serialized_orders = [_serialize_order(order) for order in result['orders']]
     return jsonify(

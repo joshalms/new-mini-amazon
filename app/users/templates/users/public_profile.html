@@ -24,7 +24,6 @@
         <dd class="col-sm-8">{{ user_info.created_at.strftime('%b %d, %Y') if user_info.created_at else '' }}</dd>
       </dl>
       <div class="mt-4">
-        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('users.users_purchases', user_id=user_info.id) }}">Purchase History</a>
         <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('users.users_me') }}">My Account</a>
       </div>
     </div>

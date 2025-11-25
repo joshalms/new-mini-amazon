@@ -5,13 +5,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h3 class="mb-1">Purchase History for {{ subject_user.full_name }}</h3>
-      {% if viewer and viewer.id == subject_user.id %}
       <p class="text-muted mb-0">You are viewing your own purchase history.</p>
-      {% elif viewer %}
-      <p class="text-muted mb-0">Signed in as {{ viewer.full_name }}.</p>
-      {% else %}
-      <p class="text-muted mb-0">Browsing anonymously.</p>
-      {% endif %}
     </div>
     <div class="text-right">
       <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('users.users_me') }}">Back to Account</a>

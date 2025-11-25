@@ -1,25 +1,56 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container" style="max-width: 520px; margin-top: 40px;">
-  <h2>Edit Profile</h2>
-  <form method="post">
-    <div class="form-group">
-      <label for="full_name">Full Name</label>
-      <input id="full_name" name="full_name" type="text" class="form-control" required value="{{ user.full_name }}">
+<div class="container py-4" style="max-width: 900px;">
+  <div class="d-flex justify-content-between align-items-start flex-wrap mb-3">
+    <div>
+      <h3 class="mb-1">Account Settings</h3>
+      <p class="text-muted mb-0">Account #{{ user.id }} • Joined {{ user.created_at.strftime('%b %d, %Y') if user.created_at else '' }}</p>
     </div>
-    <div class="form-group">
-      <label for="address">Address</label>
-      <textarea id="address" name="address" class="form-control" rows="3" required>{{ user.address }}</textarea>
+    <div class="text-right">
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('account.account_home') }}">Back to Dashboard</a>
     </div>
-    <div class="form-group">
-      <label for="new_password">New Password (optional)</label>
-      <input id="new_password" name="new_password" type="password" class="form-control" placeholder="Leave blank to keep current password">
+  </div>
+
+  <div class="row">
+    <div class="col-md-5 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Profile snapshot</h5>
+          <ul class="list-unstyled small mb-0">
+            <li><strong>Email:</strong> {{ user.email }}</li>
+            <li><strong>Name:</strong> {{ user.full_name }}</li>
+            <li><strong>Address:</strong> {{ user.address }}</li>
+          </ul>
+        </div>
+      </div>
     </div>
-    <div class="d-flex justify-content-between">
-      <a class="btn btn-secondary" href="{{ url_for('account.account_home') }}">Cancel</a>
-      <button class="btn btn-primary" type="submit">Save Changes</button>
+
+    <div class="col-md-7 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Update details</h5>
+          <form method="post">
+            <div class="form-group">
+              <label for="full_name">Full Name</label>
+              <input id="full_name" name="full_name" type="text" class="form-control" required value="{{ user.full_name }}">
+            </div>
+            <div class="form-group">
+              <label for="address">Address</label>
+              <textarea id="address" name="address" class="form-control" rows="3" required>{{ user.address }}</textarea>
+            </div>
+            <div class="form-group">
+              <label for="new_password">New Password (optional)</label>
+              <input id="new_password" name="new_password" type="password" class="form-control" placeholder="Leave blank to keep current password">
+            </div>
+            <div class="d-flex justify-content-between">
+              <a class="btn btn-secondary" href="{{ url_for('account.account_home') }}">Cancel</a>
+              <button class="btn btn-primary" type="submit">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-  </form>
+  </div>
 </div>
 {% endblock %}
