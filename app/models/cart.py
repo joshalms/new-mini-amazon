@@ -10,13 +10,11 @@ def _db():
 def get_or_create_cart(user_id):
     db = _db()
 
-    # CHANGED: "Cart" → cart
     rows = db.execute("SELECT id FROM cart WHERE user_id = :uid", uid=user_id)
 
     if rows:
         return rows[0][0]
 
-    # CHANGED: "Cart" → cart
     inserted = db.execute(
         "INSERT INTO cart (user_id) VALUES (:uid) RETURNING id",
         uid=user_id
@@ -27,7 +25,6 @@ def get_or_create_cart(user_id):
 def get_cart_for_user(user_id):
     db = _db()
 
-    # CHANGED: cartitem, cart, products (all lowercase)
     rows = db.execute("""
         SELECT ci.product_id, ci.quantity, p.name, p.price
         FROM cartitem ci
@@ -53,7 +50,6 @@ def add_item_to_cart(user_id, product_id, quantity=1):
     db = _db()
     cart_id = get_or_create_cart(user_id)
 
-    # CHANGED: "CartItem" → cartitem
     rows = db.execute(
         "SELECT id, quantity FROM cartitem WHERE cart_id = :cid AND product_id = :pid",
         cid=cart_id, pid=product_id
@@ -64,17 +60,14 @@ def add_item_to_cart(user_id, product_id, quantity=1):
         new_q = existing + int(quantity)
 
         if new_q <= 0:
-            # CHANGED: "CartItem" → cartitem
             db.execute("DELETE FROM cartitem WHERE id = :id", id=item_id)
         else:
-            # CHANGED: "CartItem" → cartitem
             db.execute(
                 "UPDATE cartitem SET quantity = :q WHERE id = :id",
                 q=new_q, id=item_id
             )
     else:
         if int(quantity) > 0:
-            # CHANGED: "CartItem" → cartitem
             db.execute(
                 "INSERT INTO cartitem (cart_id, product_id, quantity) "
                 "VALUES (:cid, :pid, :q)",
@@ -87,28 +80,24 @@ def set_item_quantity(user_id, product_id, quantity=0):
     cart_id = get_or_create_cart(user_id)
 
     if int(quantity) <= 0:
-        # CHANGED: "CartItem" → cartitem
         db.execute(
             "DELETE FROM cartitem WHERE cart_id = :cid AND product_id = :pid",
             cid=cart_id, pid=product_id
         )
         return
 
-    # CHANGED: "CartItem" → cartitem
     rows = db.execute(
         "SELECT id FROM cartitem WHERE cart_id = :cid AND product_id = :pid",
         cid=cart_id, pid=product_id
     )
 
     if rows:
-        # CHANGED: "CartItem" → cartitem
         db.execute(
             "UPDATE cartitem SET quantity = :q "
             "WHERE cart_id = :cid AND product_id = :pid",
             q=quantity, cid=cart_id, pid=product_id
         )
     else:
-        # CHANGED: "CartItem" → cartitem
         db.execute(
             "INSERT INTO cartitem (cart_id, product_id, quantity) "
             "VALUES (:cid, :pid, :q)",
@@ -118,7 +107,6 @@ def set_item_quantity(user_id, product_id, quantity=0):
 
 def clear_cart(user_id):
     db = _db()
-    # CHANGED: "CartItem" → cartitem; "Cart" → cart
     db.execute(
         "DELETE FROM cartitem WHERE cart_id = (SELECT id FROM cart WHERE user_id = :uid)",
         uid=user_id
@@ -134,7 +122,6 @@ def submit_order(user_id):
 
     db = _db()
 
-    # CHANGED: CartItem → cartitem, Cart → cart, Products → products
     cart_items = db.execute("""
         SELECT ci.product_id, ci.quantity, p.price, p.name
         FROM cartitem ci
@@ -156,7 +143,6 @@ def submit_order(user_id):
         if price is None:
             return None, f"Product '{name}' has no price"
 
-        # CHANGED: Inventory → inventory
         seller_rows = db.execute("""
             SELECT user_id, quantity
             FROM inventory
@@ -190,7 +176,6 @@ def submit_order(user_id):
     try:
         with db.engine.begin() as conn:
 
-            # CHANGED: "orders" → orders
             order_result = conn.execute(
                 text("""
                     INSERT INTO orders (buyer_id, total_cents, fulfilled)
@@ -203,7 +188,6 @@ def submit_order(user_id):
 
             for item in items_to_order:
 
-                # CHANGED: "order_items" → order_items
                 conn.execute(
                     text("""
                         INSERT INTO order_items
@@ -213,7 +197,6 @@ def submit_order(user_id):
                     item | {"order_id": order_id}
                 )
 
-                # CHANGED: "Inventory" → inventory
                 conn.execute(
                     text("""
                         UPDATE inventory
@@ -227,7 +210,6 @@ def submit_order(user_id):
                     }
                 )
 
-            # CHANGED: "CartItem" → cartitem; "Cart" → cart
             conn.execute(
                 text("DELETE FROM cartitem WHERE cart_id = (SELECT id FROM cart WHERE user_id = :uid)"),
                 {"uid": user_id}
