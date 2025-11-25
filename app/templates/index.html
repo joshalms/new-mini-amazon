@@ -19,6 +19,8 @@
 
 <h2>Products for sale:</h2>
 <p class="text-muted">Showing the first 50 available products.</p>
+<div id="cart-inline-alert" class="alert" style="display:none;" role="alert"></div>
+
 <table class='table table-hover table-bordered container'>
   <thead class="thead-dark">
     <tr>
@@ -27,6 +29,7 @@
       <th scope="col">Price</th>
       <th scope="col">Avg Rating</th>
       <th scope="col">Wishlist</th>
+      <th scope="col">Cart</th>
     </tr>
   </thead>
   <tbody>
@@ -51,6 +54,20 @@
           </form>
           {% else %}
           <a href="{{ url_for('account.login') }}">Log in</a>
+          {% endif %}
+        </td>
+        <td>
+          {% if g.user %}
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary add-to-cart-btn"
+            data-product-id="{{ product.id }}"
+            data-product-name="{{ product.name|e }}"
+          >
+            Add to Cart
+          </button>
+          {% else %}
+          <a href="{{ url_for('account.login', next=url_for('cart.view_cart')) }}">Log in</a>
           {% endif %}
         </td>
       </tr>
@@ -86,6 +103,85 @@
 </table>
 {% else %}
 <p><a href="{{ url_for('account.login') }}">Log in</a> to see your purchase history!</p>
+{% endif %}
+
+{% if g.user %}
+<script>
+  (function () {
+    const endpoint = {{ url_for('cart.api_add_item', user_id=g.user.id)|tojson }};
+    const cartButtons = document.querySelectorAll('.add-to-cart-btn');
+    const alertBox = document.getElementById('cart-inline-alert');
+
+    if (!cartButtons.length) {
+      return;
+    }
+
+    cartButtons.forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const productId = Number(btn.dataset.productId);
+        if (!productId) {
+          return;
+        }
+
+        const productName = btn.dataset.productName || 'item';
+        const originalText = btn.textContent;
+        const originalClasses = btn.className;
+        btn.disabled = true;
+        btn.textContent = 'Adding...';
+
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ product_id: productId, quantity: 1 }),
+          });
+
+          let payload = {};
+          try {
+            payload = await res.json();
+          } catch (err) {
+            payload = {};
+          }
+
+          if (!res.ok || payload.ok !== true) {
+            const errMsg = payload.error || `Server error (${res.status})`;
+            throw new Error(errMsg);
+          }
+
+          btn.classList.remove('btn-outline-primary');
+          btn.classList.add('btn-success');
+          btn.textContent = 'Added!';
+          showAlert(`${productName} is now in your cart.`, 'success');
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.className = originalClasses;
+            btn.textContent = originalText;
+          }, 1500);
+        } catch (err) {
+          console.error(err);
+          btn.disabled = false;
+          btn.className = originalClasses;
+          btn.textContent = originalText;
+          showAlert(err.message || 'Unable to add to cart.', 'danger');
+        }
+      });
+    });
+
+    function showAlert(message, level) {
+      if (!alertBox) {
+        return;
+      }
+      alertBox.style.display = 'block';
+      alertBox.textContent = message;
+      alertBox.className = `alert alert-${level}`;
+      clearTimeout(showAlert._timer);
+      showAlert._timer = setTimeout(() => {
+        alertBox.style.display = 'none';
+      }, 4000);
+    }
+  })();
+</script>
 {% endif %}
 
 {% endblock %}

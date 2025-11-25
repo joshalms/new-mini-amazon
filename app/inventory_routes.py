@@ -13,7 +13,7 @@ def api_get_inventory(user_id):
 @bp.route('/users/<int:user_id>/inventory')
 def view_inventory(user_id):
     items = get_inventory_for_user(user_id)
-    return render_template('inventory.html', inventory=items, user_id=user_id)
+    return render_template('inventory.html', inventory=items, owner_id=user_id)
 
 #MANIPULATE INVENTORY
 
