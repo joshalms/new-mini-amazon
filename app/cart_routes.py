@@ -1,6 +1,13 @@
 # app/cart_routes.py
 from flask import Blueprint, jsonify, request, render_template, g, redirect, url_for, flash
-from app.models.cart import get_cart_for_user, add_item_to_cart, set_item_quantity, clear_cart, submit_order
+from app.models.cart import (
+    CartError,
+    add_item_to_cart,
+    clear_cart,
+    get_cart_for_user,
+    set_item_quantity,
+    submit_order,
+)
 
 bp = Blueprint('cart', __name__)
 
@@ -50,7 +57,14 @@ def api_add_item(user_id):
         return jsonify({"error": "quantity must be an integer"}), 400
     if product_id is None:
         return jsonify({"error": "missing product_id"}), 400
-    add_item_to_cart(user_id, int(product_id), quantity)
+    try:
+        product_id = int(product_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "product_id must be an integer"}), 400
+    try:
+        add_item_to_cart(user_id, product_id, quantity)
+    except CartError as err:
+        return jsonify({"error": str(err)}), 400
     return jsonify({"ok": True})
 
 
@@ -67,7 +81,14 @@ def api_set_item(user_id):
         return jsonify({"error": "quantity must be an integer"}), 400
     if product_id is None:
         return jsonify({"error": "missing product_id"}), 400
-    set_item_quantity(user_id, int(product_id), quantity)
+    try:
+        product_id = int(product_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "product_id must be an integer"}), 400
+    try:
+        set_item_quantity(user_id, product_id, quantity)
+    except CartError as err:
+        return jsonify({"error": str(err)}), 400
     return jsonify({"ok": True})
 
 

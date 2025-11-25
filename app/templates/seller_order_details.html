@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 720px; margin-top: 40px;">
+  <h2>Order #{{ order_id }} Details</h2>
+
+  <ul class="list-group mt-3">
+    {% for line in order_details %}
+    <li class="list-group-item">
+      <div class="d-flex justify-content-between">
+        <span>{{ line.quantity }} × {{ line.product_name }}</span>
+        <span><strong>{{ format_money(line.unit_price_cents) }}</strong></span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Total: <strong>{{ format_money(line.unit_price_cents * line.quantity) }}</strong></span>
+        {% if not line.fulfilled_at %}
+        <form method="POST" action="{{ url_for('inventory.fulfill_line_item', user_id=user_id, order_id=order_id, line_item_id=line.line_item_id) }}">
+          <button type="submit" class="btn btn-sm btn-outline-success mt-2">Mark as Fulfilled</button>
+        </form>
+        {% else %}
+        <span class="badge badge-success mt-2">Line Item Fulfilled</span>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <a class="btn btn-link mt-3" href="{{ url_for('inventory.view_orders', user_id=user_id) }}">Back to Orders</a>
+</div>
+{% endblock %}
