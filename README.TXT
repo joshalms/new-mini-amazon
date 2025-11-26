@@ -82,4 +82,4 @@ Code Breakdown:
         - Backend: cart_routes.py, models/cart.py
         - Frontend: templates/cart.html
 Demo Video:
-    - INSERT LINK HERE
+    - https://drive.google.com/file/d/13V5hfVyR4Q1YclDGZe1ZjFH0CfSOHl3c/view?t=31
