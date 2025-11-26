@@ -3,45 +3,61 @@
 {% block content %}
 <h1>Top Products</h1>
 
-<!-- Container for products -->
-<div id="products-container" class="products-container"></div>
-
-<!-- Form to choose number of products -->
 <form id="top-k-form">
     <label for="k">Number of products:</label>
     <input type="number" name="k" id="k" min="1" value="1">
     <button type="submit">Show Top Products</button>
 </form>
 
+<table id="products-table" class="table table-hover table-bordered container">
+    <tr>
+        <th>Product Name</th>
+        <th>Price</th>
+        <th>Available</th>
+        <th>Add to Cart</th>
+    </tr>
+</table>
+
 <script>
-    async function fetchTopProducts(k=1) {
-        const response = await fetch(`/api/products/topk?k=${k}`);
-        const products = await response.json();
-        const container = document.getElementById('products-container');
+async function fetchTopProducts(k=5) {
+    const response = await fetch(`/api/products/topk?k=${k}`);
+    const products = await response.json();
+    const table = document.getElementById('products-table');
 
-        // Clear previous products
-        container.innerHTML = '';
+    // Reset header row
+    table.innerHTML = `
+        <tr>
+            <th>Product Name</th>
+            <th>Price</th>
+            <th>Available</th>
+        </tr>
+    `;
 
-        products.forEach(product => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-                <h2>${product.name}</h2>
-                <p>Price: $${product.price}</p>
-                <p>Available: ${product.available ? 'Yes' : 'No'}</p>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    // Fetch default top 5 on page load
-    fetchTopProducts();
-
-    // Handle form submission
-    document.getElementById('top-k-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const k = document.getElementById('k').value;
-        fetchTopProducts(k);
+    products.forEach(product => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${product.name}</td>
+            <td>${product.price}</td>
+            <td>${product.available ? 'Yes' : 'No'}</td>
+            <td>
+      ${product.available ? `
+        <form action="/cart/add/${product.id}" method="POST">
+          <input type="submit" value="Add to Cart" class="btn btn-sm btn-outline-primary"/>
+        </form>
+      ` : ''}
+    </td>
+        `;
+        table.appendChild(row);
     });
+}
+
+// load default top products
+fetchTopProducts();
+
+document.getElementById('top-k-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const k = document.getElementById('k').value;
+    fetchTopProducts(k);
+});
 </script>
 {% endblock %}

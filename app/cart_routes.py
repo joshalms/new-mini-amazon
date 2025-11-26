@@ -11,6 +11,19 @@ from app.models.cart import (
 
 bp = Blueprint('cart', __name__)
 
+@bp.route('/cart/add/<int:product_id>', methods=['POST'])
+def add_to_cart(product_id):
+    """Add a product to the current user's cart via form submission."""
+    user = getattr(g, 'user', None)
+    if user is None:
+        flash("You must be logged in to add items to the cart.", "error")
+        return redirect(url_for('account.login', next=request.referrer))
+
+    add_item_to_cart(user.id, product_id, quantity=1)
+    flash("Product added to your cart!", "success")
+    return redirect(request.referrer or url_for('index'))
+
+
 
 def _require_cart_owner(user_id):
     """Ensure the session user matches the cart owner."""
