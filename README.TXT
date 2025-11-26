@@ -62,3 +62,24 @@ Code Breakdown:
 Demo Video:
     - https://drive.google.com/file/d/1Fy7RcraR993XkU97kMW8r7DClJ6JnFLB/view?usp=sharing
 
+
+Milestone 4:
+
+Code Breakdown:
+    Users Guru:
+        - Backend: account.py, models/user.py, models/purchases.py
+        - Frontend: templates/account/
+    Sellers Guru (Luke):
+        - Backend: inventory_routes.py, models/inventory.py
+        - Frontend: templates/inventory
+    Products Guru (Mauricio):
+        - Backend: app/products.py, models/product.py
+        - Frontend: templates/top_products.html
+    Social Guru (Rafael):
+        - Backend: account.py, models/seller_review.py
+        - Frontend: templates/seller_reviews.html
+    Cart Guru (Dhruva):
+        - Backend: cart_routes.py, models/cart.py
+        - Frontend: templates/cart.html
+Demo Video:
+    - INSERT LINK HERE
