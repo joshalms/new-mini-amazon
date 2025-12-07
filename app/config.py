@@ -3,7 +3,7 @@ from urllib.parse import quote_plus
 
 
 class Config(object):
-    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key'
     DB_USER = os.environ.get('DB_USER') or ''
     DB_PASSWORD = os.environ.get('DB_PASSWORD') or ''
     DB_HOST = os.environ.get('DB_HOST') or 'localhost'

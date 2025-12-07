@@ -2,7 +2,7 @@ from flask import g, render_template
 import datetime
 
 from .models.product import Product
-from .models.purchase import Purchase
+from .models import purchases
 
 from flask import Blueprint
 bp = Blueprint('index', __name__)
@@ -14,11 +14,11 @@ def index():
     products = Product.get_featured(limit=50)
     # find the products current user has bought:
     if g.get('user'):
-        purchases = Purchase.get_all_by_uid_since(
-            g.user.id, datetime.datetime(1980, 9, 14, 0, 0, 0), limit=20)
+        purchase_history = purchases.get_recent_line_items_for_user(
+            g.user.id, limit=20)
     else:
-        purchases = None
+        purchase_history = None
     # render the page by adding information to the index.html file
     return render_template('index.html',
                            avail_products=products,
-                           purchase_history=purchases)
+                           purchase_history=purchase_history)

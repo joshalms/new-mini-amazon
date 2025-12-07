@@ -15,6 +15,7 @@
         <span>Total: <strong>{{ format_money(line.unit_price_cents * line.quantity) }}</strong></span>
         {% if not line.fulfilled_at %}
         <form method="POST" action="{{ url_for('inventory.fulfill_line_item', user_id=user_id, order_id=order_id, line_item_id=line.line_item_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-sm btn-outline-success mt-2">Mark as Fulfilled</button>
         </form>
         {% else %}

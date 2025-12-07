@@ -35,6 +35,7 @@
           <a href="{{ url_for('inventory.edit_product', user_id=owner_id, product_id=item.product_id) }}" class="btn btn-warning btn-sm">Edit</a>
           
           <form action="{{ url_for('inventory.remove_product', user_id=owner_id, product_id=item.product_id) }}" method="POST" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove this product?')">Remove</button>
           </form>
         </td>

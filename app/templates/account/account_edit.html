@@ -31,6 +31,7 @@
         <div class="card-body">
           <h5 class="card-title mb-3">Update details</h5>
           <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
               <label for="full_name">Full Name</label>
               <input id="full_name" name="full_name" type="text" class="form-control" required value="{{ user.full_name }}">

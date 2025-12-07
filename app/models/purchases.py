@@ -179,3 +179,129 @@ WHERE o.buyer_id = :user_id
         'total_cents': stats[1] or 0,
         'last_order_at': stats[2],
     }
+
+
+def get_recent_line_items_for_user(user_id, limit=20):
+    """Return the latest order items for a buyer, ordered by order time."""
+    try:
+        limit_val = int(limit)
+    except (TypeError, ValueError):
+        limit_val = 20
+    limit_val = max(1, min(50, limit_val))
+
+    rows = app.db.execute(
+        """
+SELECT
+    oi.id AS order_item_id,
+    o.id AS order_id,
+    o.created_at,
+    oi.product_id,
+    p.name AS product_name,
+    oi.quantity,
+    oi.unit_price_cents,
+    (oi.quantity * oi.unit_price_cents)::BIGINT AS line_total_cents
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+JOIN products p ON p.id = oi.product_id
+WHERE o.buyer_id = :user_id
+ORDER BY o.created_at DESC, o.id DESC, oi.id DESC
+LIMIT :limit
+""",
+        user_id=user_id,
+        limit=limit_val,
+    )
+    line_items = []
+    for row in rows:
+        line_items.append(
+            {
+                'order_item_id': row[0],
+                'order_id': row[1],
+                'created_at': row[2],
+                'product_id': row[3],
+                'product_name': row[4],
+                'quantity': row[5],
+                'unit_price_cents': row[6],
+                'line_total_cents': row[7],
+            }
+        )
+    return line_items
+
+
+def get_order_detail(order_id):
+    """Return header + line items for a specific order, including seller and product names."""
+    header_rows = app.db.execute(
+        """
+SELECT
+    o.id,
+    o.buyer_id,
+    o.created_at,
+    o.fulfilled,
+    o.total_cents,
+    u.full_name,
+    u.address,
+    u.email
+FROM orders o
+LEFT JOIN users u ON u.id = o.buyer_id
+WHERE o.id = :order_id
+""",
+        order_id=order_id,
+    )
+    if not header_rows:
+        return None
+
+    header = header_rows[0]
+    line_rows = app.db.execute(
+        """
+SELECT
+    oi.id,
+    oi.product_id,
+    p.name,
+    oi.seller_id,
+    seller.full_name AS seller_name,
+    oi.quantity,
+    oi.unit_price_cents,
+    oi.fulfilled_at
+FROM order_items oi
+JOIN products p ON p.id = oi.product_id
+LEFT JOIN users seller ON seller.id = oi.seller_id
+WHERE oi.order_id = :order_id
+ORDER BY oi.id
+""",
+        order_id=order_id,
+    )
+
+    computed_total = 0
+    line_items = []
+    for row in line_rows:
+        quantity = row[5] or 0
+        unit_price = row[6] or 0
+        line_total = quantity * unit_price
+        computed_total += line_total
+        line_items.append(
+            {
+                'order_item_id': row[0],
+                'product_id': row[1],
+                'product_name': row[2],
+                'seller_id': row[3],
+                'seller_name': row[4],
+                'quantity': quantity,
+                'unit_price_cents': unit_price,
+                'line_total_cents': line_total,
+                'fulfilled_at': row[7],
+            }
+        )
+
+    total_cents = computed_total if computed_total else header[4]
+    return {
+        'order_id': header[0],
+        'buyer': {
+            'id': header[1],
+            'full_name': header[5],
+            'address': header[6],
+            'email': header[7],
+        },
+        'created_at': header[2],
+        'fulfilled': bool(header[3]),
+        'total_cents': total_cents,
+        'line_items': line_items,
+    }

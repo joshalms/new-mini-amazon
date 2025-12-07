@@ -44,6 +44,7 @@
     </div>
     {% if user_id is not none %}
     <form id="checkout-form" method="POST" action="{{ url_for('cart.checkout') }}" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" id="checkout-btn" style="padding:12px 24px; font-size:16px; background-color:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">
         Checkout
       </button>

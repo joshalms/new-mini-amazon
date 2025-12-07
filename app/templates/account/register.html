@@ -4,6 +4,7 @@
 <br><br>
 <h2>Create an Account</h2>
 <form method="post" class="container" style="max-width: 500px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="form-group">
     <label for="email">Email</label>
     <input id="email" name="email" type="email" class="form-control" required value="{{ email or '' }}">

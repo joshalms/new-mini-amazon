@@ -6,6 +6,7 @@
   <p class="lead">Current balance: {{ format_money(balance_cents) }}</p>
 
   <form method="post" class="mb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label for="amount_dollars">Amount (USD, dollars and cents)</label>
       <input id="amount_dollars" name="amount_dollars" type="number" class="form-control" min="0.01" step="0.01" placeholder="e.g. 12.34" required>

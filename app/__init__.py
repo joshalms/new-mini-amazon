@@ -1,4 +1,6 @@
-from flask import Flask
+import secrets
+
+from flask import Flask, abort, request, session
 
 from .config import Config
 from .db import DB
@@ -13,6 +15,26 @@ def create_app():
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     app.db = DB(app)
+
+    def _generate_csrf_token():
+        token = session.get('_csrf_token')
+        if not token:
+            token = secrets.token_hex(16)
+            session['_csrf_token'] = token
+        return token
+
+    def _protect_csrf():
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            content_type = (request.content_type or '').lower()
+            if content_type.startswith('application/json'):
+                return
+            token = session.get('_csrf_token')
+            submitted = request.form.get('csrf_token') or request.headers.get('X-CSRFToken')
+            if not token or not submitted or token != submitted:
+                abort(400)
+
+    app.before_request(_protect_csrf)
+    app.jinja_env.globals['csrf_token'] = _generate_csrf_token
 
     from .account import bp as account_bp
     app.register_blueprint(account_bp)

@@ -19,6 +19,7 @@
 </table>
 
 <script>
+const csrfToken = {{ csrf_token()|tojson }};
 async function fetchTopProducts(k=5) {
     const response = await fetch(`/api/products/topk?k=${k}`);
     const products = await response.json();
@@ -42,6 +43,7 @@ async function fetchTopProducts(k=5) {
             <td>
       ${product.available ? `
         <form action="/cart/add/${product.id}" method="POST">
+          <input type="hidden" name="csrf_token" value="${csrfToken}">
           <input type="submit" value="Add to Cart" class="btn btn-sm btn-outline-primary"/>
         </form>
       ` : ''}

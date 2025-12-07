@@ -46,6 +46,7 @@ from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.models import seller_review
+from app.models import purchases
 
 bp = Blueprint('users', __name__, template_folder='templates')
 
@@ -177,187 +178,64 @@ def _parse_date_param(raw_value: Optional[str]) -> Optional[datetime]:
     return None
 
 
-def _fetch_purchases(
-    user_id: int,
-    seller_id: Optional[int] = None,
-    start_at: Optional[datetime] = None,
-    end_before: Optional[datetime] = None,
-    limit: Optional[int] = None,
-    offset: Optional[int] = None,
-    serialize_dates: bool = True,
-) -> List[Dict[str, Any]]:
-    """Aggregate purchases for a buyer with optional filters (Spec §3.1 / §3.2 / §4.1)."""
-    conditions = ["o.buyer_id = :user_id"]
-    params: Dict[str, Any] = {'user_id': user_id}
+def _build_purchase_filters():
+    """Return normalized filter kwargs and the raw values for template echoing."""
+    item_query = (request.args.get('item') or '').strip()
+    seller_raw = (request.args.get('seller') or '').strip()
+    start_at = _parse_date_param(request.args.get('start'))
+    end_at = _parse_date_param(request.args.get('end'))
+    end_before = end_at + timedelta(days=1) if end_at else None
 
-    if seller_id is not None:
-        conditions.append(
-            "EXISTS (SELECT 1 FROM order_items soi WHERE soi.order_id = o.id AND soi.seller_id = :seller_id)"
-        )
-        params['seller_id'] = seller_id
+    seller_id = None
+    seller_name = None
+    if seller_raw:
+        try:
+            seller_id = int(seller_raw)
+        except ValueError:
+            seller_name = seller_raw
 
-    if start_at is not None:
-        conditions.append("o.created_at >= :start_at")
-        params['start_at'] = start_at
-
-    if end_before is not None:
-        conditions.append("o.created_at < :end_before")
-        params['end_before'] = end_before
-
-    where_clause = " AND ".join(conditions)
-    sql = f"""
-SELECT
-    o.id AS order_id,
-    o.created_at,
-    o.total_cents,
-    o.fulfilled,
-    COUNT(oi.id) AS item_count,
-    ARRAY_REMOVE(ARRAY_AGG(DISTINCT oi.seller_id), NULL) AS seller_ids
-FROM orders o
-LEFT JOIN order_items oi ON oi.order_id = o.id
-WHERE {where_clause}
-GROUP BY o.id, o.created_at, o.total_cents, o.fulfilled
-ORDER BY o.created_at DESC
-"""
-    # NOTE: This query is covered by idx_orders_buyer_created ON orders (buyer_id, created_at DESC)
-    #       to keep Milestone 4 pagination requirements performant.
-
-    if limit is not None:
-        sql += "\nLIMIT :limit"
-        params['limit'] = limit
-    if offset is not None:
-        sql += "\nOFFSET :offset"
-        params['offset'] = offset
-
-    rows = current_app.db.execute(sql, **params)
-    purchases: List[Dict[str, Any]] = []
-    for row in rows:
-        created_at = row[1]
-        created_value: Any
-        if serialize_dates and isinstance(created_at, datetime):
-            created_value = created_at.isoformat()
-        else:
-            created_value = created_at
-        seller_ids = [seller for seller in (row[5] or []) if seller is not None]
-        purchases.append(
-            {
-                'order_id': row[0],
-                'created_at': created_value,
-                'total_cents': row[2],
-                'fulfilled': bool(row[3]),
-                'item_count': int(row[4]) if row[4] is not None else 0,
-                'seller_ids': seller_ids,
-            }
-        )
-    return purchases
-
-
-def _count_purchases(
-    user_id: int,
-    seller_id: Optional[int] = None,
-    start_at: Optional[datetime] = None,
-    end_before: Optional[datetime] = None,
-) -> int:
-    """Return total number of orders for pagination metadata (Spec §3.1)."""
-    conditions = ["buyer_id = :user_id"]
-    params: Dict[str, Any] = {'user_id': user_id}
-
-    if seller_id is not None:
-        conditions.append(
-            "EXISTS (SELECT 1 FROM order_items soi WHERE soi.order_id = orders.id AND soi.seller_id = :seller_id)"
-        )
-        params['seller_id'] = seller_id
-
-    if start_at is not None:
-        conditions.append("created_at >= :start_at")
-        params['start_at'] = start_at
-
-    if end_before is not None:
-        conditions.append("created_at < :end_before")
-        params['end_before'] = end_before
-
-    where_clause = " AND ".join(conditions)
-    sql = f"""
-SELECT COUNT(*)
-FROM orders
-WHERE {where_clause}
-"""
-    rows = current_app.db.execute(sql, **params)
-    return rows[0][0] if rows else 0
-
-
-def _get_order_detail(order_id: int) -> Optional[Dict[str, Any]]:
-    """Return order header and line items required by Spec §3.2 / §4.2."""
-    header_rows = current_app.db.execute(
-        """
-SELECT
-    o.id,
-    o.buyer_id,
-    o.created_at,
-    o.fulfilled,
-    o.total_cents,
-    u.full_name,
-    u.address,
-    u.email
-FROM orders o
-LEFT JOIN Users u ON u.id = o.buyer_id
-WHERE o.id = :order_id
-""",
-        order_id=order_id,
-    )
-
-    if not header_rows:
-        return None
-
-    header = header_rows[0]
-    line_rows = current_app.db.execute(
-        """
-SELECT
-    id,
-    product_id,
-    seller_id,
-    quantity,
-    unit_price_cents,
-    fulfilled_at
-FROM order_items
-WHERE order_id = :order_id
-ORDER BY id
-""",
-        order_id=order_id,
-    )
-
-    line_items: List[Dict[str, Any]] = []
-    computed_total = 0
-    for row in line_rows:
-        quantity = row[3] or 0
-        unit_price = row[4] or 0
-        line_total = quantity * unit_price
-        computed_total += line_total
-        line_items.append(
-            {
-                'order_item_id': row[0],
-                'product_id': row[1],
-                'seller_id': row[2],
-                'quantity': quantity,
-                'unit_price_cents': unit_price,
-                'line_total_cents': line_total,
-                'fulfilled_at': row[5].isoformat() if isinstance(row[5], datetime) else row[5],
-            }
-        )
-
-    total_cents = computed_total if computed_total else header[4]
-    return {
-        'order_id': header[0],
-        'buyer': {
-            'id': header[1],
-            'full_name': header[5],
-            'address': header[6],
-            'email': header[7],
+    return (
+        {
+            'item_query': item_query or None,
+            'seller_id': seller_id,
+            'seller_name': seller_name,
+            'start_at': start_at,
+            'end_before': end_before,
         },
-        'created_at': header[2],
-        'fulfilled': bool(header[3]),
-        'total_cents': total_cents,
-        'line_items': line_items,
+        {
+            'item_query': item_query,
+            'seller_query': seller_raw,
+            'start_filter': request.args.get('start', ''),
+            'end_filter': request.args.get('end', ''),
+        },
+    )
+
+
+def _serialize_purchase(order: Dict[str, Any]) -> Dict[str, Any]:
+    """Shape a purchase dict suitable for API responses."""
+    created_at = order.get('order_created_at')
+    serialized_items: List[Dict[str, Any]] = []
+    for item in order.get('line_items', []):
+        serialized_items.append(
+            {
+                'product_id': item.get('product_id'),
+                'product_name': item.get('product_name'),
+                'quantity': item.get('quantity'),
+                'unit_price_cents': item.get('unit_price_cents'),
+                'line_total_cents': item.get('line_total_cents'),
+                'fulfilled': bool(item.get('fulfilled')),
+                'seller_id': item.get('seller_id'),
+                'seller_name': item.get('seller_name'),
+            }
+        )
+
+    return {
+        'order_id': order.get('order_id'),
+        'order_created_at': created_at.isoformat() if isinstance(created_at, datetime) else created_at,
+        'total_cents': order.get('total_cents'),
+        'item_count': order.get('item_count'),
+        'all_fulfilled': order.get('all_fulfilled'),
+        'items': serialized_items,
     }
 
 
@@ -724,37 +602,21 @@ def api_user_purchases(user_id: int):
     per_page = max(1, min(50, per_page))
     offset = (page - 1) * per_page
 
-    seller_id = request.args.get('seller')
-    try:
-        seller_filter = int(seller_id) if seller_id else None
-    except ValueError:
-        seller_filter = None
-
-    start_at = _parse_date_param(request.args.get('start'))
-    end_at = _parse_date_param(request.args.get('end'))
-    end_before = end_at + timedelta(days=1) if end_at else None
-
-    purchases = _fetch_purchases(
+    filter_kwargs, _ = _build_purchase_filters()
+    result = purchases.get_purchases_for_user(
         user_id,
-        seller_id=seller_filter,
-        start_at=start_at,
-        end_before=end_before,
         limit=per_page,
         offset=offset,
-        serialize_dates=True,
+        **filter_kwargs,
     )
-    total = _count_purchases(
-        user_id,
-        seller_id=seller_filter,
-        start_at=start_at,
-        end_before=end_before,
-    )
+    total = result['total_orders']
+    serialized = [_serialize_purchase(order) for order in result['orders']]
     return jsonify(
         {
             'page': page,
             'per_page': per_page,
             'total': total,
-            'items': purchases,
+            'items': serialized,
         }
     )
 
@@ -762,14 +624,24 @@ def api_user_purchases(user_id: int):
 @bp.route('/api/orders/<int:order_id>', methods=['GET'])
 def api_order_detail(order_id: int):
     """Return order header and line items (Spec §3.2)."""
-    detail = _get_order_detail(order_id)
+    detail = purchases.get_order_detail(order_id)
     if not detail:
         return jsonify({'error': 'order not found'}), 404
+    normalized_lines = []
+    for item in detail.get('line_items', []):
+        fulfilled_at = item.get('fulfilled_at')
+        normalized_lines.append(
+            {
+                **item,
+                'fulfilled_at': fulfilled_at.isoformat() if isinstance(fulfilled_at, datetime) else fulfilled_at,
+            }
+        )
     payload = {
         **detail,
         'created_at': detail['created_at'].isoformat()
         if isinstance(detail['created_at'], datetime)
         else detail['created_at'],
+        'line_items': normalized_lines,
     }
     return jsonify(payload)
 
@@ -862,45 +734,55 @@ def users_purchases(user_id: int):
     per_page = max(1, min(50, per_page))
     offset = (page - 1) * per_page
 
-    seller_raw = request.args.get('seller')
-    try:
-        seller_filter = int(seller_raw) if seller_raw else None
-    except ValueError:
-        seller_filter = None
+    filter_kwargs, raw_filters = _build_purchase_filters()
 
-    start_at = _parse_date_param(request.args.get('start'))
-    end_at = _parse_date_param(request.args.get('end'))
-    end_before = end_at + timedelta(days=1) if end_at else None
-
-    purchases = _fetch_purchases(
+    result = purchases.get_purchases_for_user(
         user_id,
-        seller_id=seller_filter,
-        start_at=start_at,
-        end_before=end_before,
         limit=per_page,
         offset=offset,
-        serialize_dates=False,
+        **filter_kwargs,
     )
-    total = _count_purchases(
-        user_id,
-        seller_id=seller_filter,
-        start_at=start_at,
-        end_before=end_before,
+    total_orders = result['total_orders']
+    total_pages = max(1, (total_orders + per_page - 1) // per_page) if total_orders else 1
+
+    if total_orders and offset >= total_orders:
+        page = total_pages
+        offset = (page - 1) * per_page
+        result = purchases.get_purchases_for_user(
+            user_id,
+            limit=per_page,
+            offset=offset,
+            **filter_kwargs,
+        )
+
+    filters_applied = any(
+        [
+            filter_kwargs.get('item_query'),
+            filter_kwargs.get('seller_id') is not None,
+            filter_kwargs.get('seller_name'),
+            filter_kwargs.get('start_at'),
+            filter_kwargs.get('end_before'),
+        ]
     )
-    total_pages = max(1, (total + per_page - 1) // per_page) if total else 1
 
     return render_template(
-        'users/purchases.html',
+        'purchases/list.html',
         viewer=viewer,
-        subject_user=subject_user,
-        purchases=purchases,
+        owner_name=subject_user['full_name'],
+        orders=result['orders'],
         page=page,
         per_page=per_page,
-        total=total,
+        total_orders=total_orders,
         total_pages=total_pages,
-        seller_filter=seller_raw or '',
-        start_filter=request.args.get('start', ''),
-        end_filter=request.args.get('end', ''),
+        item_query=raw_filters['item_query'],
+        seller_query=raw_filters['seller_query'],
+        start_filter=raw_filters['start_filter'],
+        end_filter=raw_filters['end_filter'],
+        filters_applied=filters_applied,
+        list_endpoint='users.users_purchases',
+        list_kwargs={'user_id': subject_user['id']},
+        detail_endpoint='users.order_detail',
+        detail_kwargs={},
     )
 
 
@@ -958,13 +840,18 @@ def order_detail(order_id: int):
     if redirect_response:
         return redirect_response
 
-    detail = _get_order_detail(order_id)
+    detail = purchases.get_order_detail(order_id)
     if not detail:
         abort(404)
     if detail['buyer']['id'] != g.user.id:
         flash('You can only view your own orders.', 'error')
         return redirect(url_for('account.account_purchases'))
-    return render_template('users/order_detail.html', order=detail)
+    return render_template(
+        'purchases/detail.html',
+        order=detail,
+        back_url=url_for('users.users_purchases', user_id=g.user.id),
+        show_reviews=False,
+    )
 
 
 @bp.route('/users/<int:user_id>/public', methods=['GET'])

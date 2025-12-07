@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set lk = list_kwargs or {} %}
+<div class="container py-4" style="max-width: 1080px;">
+  <div class="d-flex justify-content-between align-items-start flex-wrap mb-3">
+    <div>
+      <h2 class="mb-1">Purchase History</h2>
+      <p class="text-muted mb-0">
+        {% if owner_name %}Showing orders for {{ owner_name }}.{% else %}Your recent orders.{% endif %}
+      </p>
+    </div>
+    <div class="text-right">
+      {% if filters_applied %}
+      <span class="badge badge-info" aria-live="polite">Filters active</span>
+      {% else %}
+      <span class="text-muted small">No filters applied</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <form class="form-row" method="get" aria-label="Filter purchases">
+        <div class="form-group col-md-3 col-sm-6">
+          <label for="item-filter">Item name</label>
+          <input id="item-filter" name="item" type="text" class="form-control" placeholder="Search products" value="{{ item_query }}" aria-describedby="item-filter-help">
+          <small id="item-filter-help" class="form-text text-muted">Matches partial product names.</small>
+        </div>
+        <div class="form-group col-md-3 col-sm-6">
+          <label for="seller-filter">Seller (ID or name)</label>
+          <input id="seller-filter" name="seller" type="text" class="form-control" placeholder="e.g. 42 or Alice" value="{{ seller_query }}">
+        </div>
+        <div class="form-group col-md-3 col-sm-6">
+          <label for="start-filter">Start date</label>
+          <input id="start-filter" name="start" type="date" class="form-control" value="{{ start_filter }}">
+        </div>
+        <div class="form-group col-md-3 col-sm-6">
+          <label for="end-filter">End date</label>
+          <input id="end-filter" name="end" type="date" class="form-control" value="{{ end_filter }}">
+        </div>
+        <div class="form-group col-md-12 mb-0 d-flex flex-wrap align-items-center">
+          <button type="submit" class="btn btn-primary mr-2 mb-2">Apply filters</button>
+          <a class="btn btn-link mb-2" href="{{ url_for(list_endpoint, **lk) }}">Reset</a>
+          {% if filters_applied %}
+          <span class="text-muted small ml-2 mb-2" aria-live="polite">Filters applied. Showing only matching orders.</span>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if total_orders %}
+  <p class="text-muted mb-2" role="status" aria-live="polite">
+    Showing {{ orders|length }} of {{ total_orders }} orders. Page {{ page }} of {{ total_pages }}.
+  </p>
+  {% endif %}
+
+  {% if orders %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered">
+      <thead class="thead-light">
+        <tr>
+          <th scope="col">Order #</th>
+          <th scope="col">Date</th>
+          <th scope="col">Items</th>
+          <th scope="col">Total</th>
+          <th scope="col">Status</th>
+          <th scope="col">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <th scope="row">#{{ order.order_id }}</th>
+          <td>{{ order.order_created_at.strftime('%b %d, %Y %I:%M %p') if order.order_created_at else '' }}</td>
+          <td>
+            <ul class="list-unstyled mb-0 small">
+              {% for line in order.line_items %}
+              <li>
+                {{ line.quantity }} × {{ line.product_name }}
+                <span class="text-muted">({{ format_money(line.line_total_cents) }})</span>
+                {% if line.seller_name %}
+                  <span class="sr-only">Seller:</span>
+                  <span class="badge badge-light" aria-label="Seller {{ line.seller_name }}">@{{ line.seller_name }}</span>
+                {% elif line.seller_id %}
+                  <span class="badge badge-light">Seller #{{ line.seller_id }}</span>
+                {% endif %}
+                {% if not line.fulfilled %}
+                  <span class="badge badge-warning">Pending</span>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </td>
+          <td>{{ format_money(order.total_cents) }}</td>
+          <td>
+            {% if order.all_fulfilled %}
+            <span class="badge badge-success">Fulfilled</span>
+            {% else %}
+            <span class="badge badge-warning">In progress</span>
+            {% endif %}
+          </td>
+          <td style="min-width: 170px;">
+            <div class="d-flex flex-column">
+              <a class="btn btn-sm btn-outline-primary mb-2" href="{{ url_for(detail_endpoint, order_id=order.order_id, **(detail_kwargs or {})) }}">
+                View order
+              </a>
+              <details>
+                <summary class="small mb-1">View items</summary>
+                <ul class="pl-3 small mb-0">
+                  {% for line in order.line_items %}
+                  <li>{{ line.quantity }} × {{ line.product_name }}</li>
+                  {% endfor %}
+                </ul>
+              </details>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if total_pages > 1 %}
+  <nav aria-label="Purchase pagination">
+    <ul class="pagination justify-content-center">
+      <li class="page-item {{ 'disabled' if page <= 1 }}">
+        <a class="page-link" href="{{ url_for(list_endpoint, page=page-1 if page > 1 else 1, per_page=per_page, item=item_query, seller=seller_query, start=start_filter, end=end_filter, **lk) }}" aria-label="Previous page">Previous</a>
+      </li>
+      <li class="page-item disabled">
+        <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
+      </li>
+      <li class="page-item {{ 'disabled' if page >= total_pages }}">
+        <a class="page-link" href="{{ url_for(list_endpoint, page=page+1 if page < total_pages else total_pages, per_page=per_page, item=item_query, seller=seller_query, start=start_filter, end=end_filter, **lk) }}" aria-label="Next page">Next</a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+  {% else %}
+  <div class="alert alert-info" role="status" aria-live="polite">
+    <h5 class="mb-1">No purchases to show</h5>
+    <p class="mb-0">Try adjusting your filters or <a href="{{ url_for('index.index') }}">browse products</a> to place your first order.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -2,13 +2,15 @@
 
 {% block content %}
 <div class="container py-4" style="max-width: 960px;">
+  <a class="btn btn-link p-0 mb-3" href="{{ back_url or url_for('account.account_purchases') }}" aria-label="Back to purchases">&larr; Back to purchases</a>
+
   <div class="card shadow-sm mb-4">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-start flex-wrap">
         <div>
           <h3 class="card-title mb-1">Order #{{ order.order_id }}</h3>
           <p class="text-muted mb-2">
-            Placed {{ order.created_at.strftime('%b %d, %Y %I:%M %p') if order.created_at else '' }}
+            Placed {{ order.created_at.strftime('%b %d, %Y %I:%M %p') if order.created_at else 'unknown date' }}
           </p>
           <p class="mb-0">
             <strong>Buyer:</strong> {{ order.buyer.full_name }}<br>
@@ -46,19 +48,19 @@
               <th scope="col">Unit Price</th>
               <th scope="col">Line Total</th>
               <th scope="col">Fulfilled At</th>
-              <th scope="col"></th>
+              {% if show_reviews %}<th scope="col" aria-label="Review actions"></th>{% endif %}
             </tr>
           </thead>
           <tbody>
             {% for item in order.line_items %}
             <tr class="{{ '' if item.fulfilled_at else 'table-warning' }}">
               <td>
-                <a href="/products/{{ item.product_id }}">Product #{{ item.product_id }}</a><br>
-                <small class="text-muted">Cart module: add re-order button here</small>
+                {{ item.product_name or ('Product #' ~ item.product_id) }}
+                <div class="text-muted small">Product ID {{ item.product_id }}</div>
               </td>
               <td>
                 {% if item.seller_id %}
-                  <a href="{{ url_for('users.public_profile', user_id=item.seller_id) }}">Seller #{{ item.seller_id }}</a>
+                  {{ item.seller_name or ('Seller #' ~ item.seller_id) }}
                 {% else %}
                   <span class="text-muted">N/A</span>
                 {% endif %}
@@ -68,22 +70,32 @@
               <td>{{ format_money(item.line_total_cents) }}</td>
               <td>
                 {% if item.fulfilled_at %}
-                  <span class="badge badge-success">{{ item.fulfilled_at }}</span>
+                  {{ item.fulfilled_at.strftime('%b %d, %Y %I:%M %p') if item.fulfilled_at else item.fulfilled_at }}
                 {% else %}
                   <span class="badge badge-warning text-dark">Awaiting fulfillment</span>
                 {% endif %}
               </td>
+              {% if show_reviews %}
               <td>
-                <!-- Social module integration point -->
-                <a class="btn btn-link btn-sm" href="/social/reviews/new?seller_id={{ item.seller_id }}&order_id={{ order.order_id }}">Review this seller</a>
+                {% if item.product_review_url %}
+                <a class="btn btn-sm {{ 'btn-outline-secondary' if item.product_review else 'btn-outline-primary' }} mb-2" href="{{ item.product_review_url }}">
+                  {{ 'Edit Review' if item.product_review else 'Review Product' }}
+                </a>
+                {% endif %}
+                {% if item.seller_review_url %}
+                <a class="btn btn-sm {{ 'btn-outline-secondary' if item.seller_review else 'btn-outline-primary' }}" href="{{ item.seller_review_url }}">
+                  {{ 'Edit Review' if item.seller_review else 'Review Seller' }}
+                </a>
+                {% endif %}
               </td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
       {% else %}
-      <p class="text-muted mb-0">No line items recorded for this order.</p>
+      <p class="text-muted mb-0" role="status" aria-live="polite">No line items recorded for this order.</p>
       {% endif %}
     </div>
   </div>

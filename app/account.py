@@ -112,85 +112,6 @@ def _serialize_order(order):
     }
 
 
-def _get_order_detail(order_id):
-    header_rows = current_app.db.execute(
-        """
-SELECT
-    o.id,
-    o.buyer_id,
-    o.created_at,
-    o.fulfilled,
-    o.total_cents,
-    u.full_name,
-    u.address,
-    u.email
-FROM orders o
-LEFT JOIN users u ON u.id = o.buyer_id
-WHERE o.id = :order_id
-""",
-        order_id=order_id,
-    )
-    if not header_rows:
-        return None
-
-    header = header_rows[0]
-    line_rows = current_app.db.execute(
-        """
-SELECT
-    oi.id,
-    oi.product_id,
-    p.name,
-    oi.seller_id,
-    seller.full_name AS seller_name,
-    oi.quantity,
-    oi.unit_price_cents,
-    oi.fulfilled_at
-FROM order_items oi
-JOIN products p ON p.id = oi.product_id
-LEFT JOIN users seller ON seller.id = oi.seller_id
-WHERE oi.order_id = :order_id
-ORDER BY oi.id
-""",
-        order_id=order_id,
-    )
-
-    computed_total = 0
-    line_items = []
-    for row in line_rows:
-        quantity = row[5] or 0
-        unit_price = row[6] or 0
-        line_total = quantity * unit_price
-        computed_total += line_total
-        line_items.append(
-            {
-                'order_item_id': row[0],
-                'product_id': row[1],
-                'product_name': row[2],
-                'seller_id': row[3],
-                'seller_name': row[4],
-                'quantity': quantity,
-                'unit_price_cents': unit_price,
-                'line_total_cents': line_total,
-                'fulfilled_at': row[7],
-            }
-        )
-
-    total_cents = computed_total if computed_total else header[4]
-    return {
-        'order_id': header[0],
-        'buyer': {
-            'id': header[1],
-            'full_name': header[5],
-            'address': header[6],
-            'email': header[7],
-        },
-        'created_at': header[2],
-        'fulfilled': bool(header[3]),
-        'total_cents': total_cents,
-        'line_items': line_items,
-    }
-
-
 @bp.app_context_processor
 def inject_helpers():
     return {'format_money': _format_money}
@@ -448,7 +369,8 @@ def account_purchases():
         )
 
     return render_template(
-        'account/purchases.html',
+        'purchases/list.html',
+        owner_name=g.user.full_name,
         orders=result['orders'],
         page=page,
         per_page=per_page,
@@ -459,13 +381,17 @@ def account_purchases():
         start_filter=request.args.get('start', ''),
         end_filter=request.args.get('end', ''),
         filters_applied=bool(item_query or seller_raw or start_at or end_at),
+        list_endpoint='account.account_purchases',
+        list_kwargs={},
+        detail_endpoint='account.order_detail',
+        detail_kwargs={},
     )
 
 
 @bp.route('/account/orders/<int:order_id>')
 @login_required
 def order_detail(order_id):
-    order = _get_order_detail(order_id)
+    order = purchases.get_order_detail(order_id)
     if order is None:
         abort(404)
     if order['buyer']['id'] != g.user.id:
@@ -474,7 +400,15 @@ def order_detail(order_id):
     for item in order['line_items']:
         item['product_review'] = product_review.get_user_review_for_product(g.user.id, item['product_id'])
         item['seller_review'] = seller_review.get_user_review_for_seller(g.user.id, item['seller_id']) if item['seller_id'] else None
-    return render_template('account/order_detail.html', order=order)
+        item['product_review_url'] = url_for('account.review_product', order_id=order['order_id'], product_id=item['product_id'])
+        if item['seller_id']:
+            item['seller_review_url'] = url_for('account.review_seller', order_id=order['order_id'], seller_id=item['seller_id'])
+    return render_template(
+        'purchases/detail.html',
+        order=order,
+        back_url=url_for('account.account_purchases'),
+        show_reviews=True,
+    )
 
 
 @bp.route('/api/users/<int:user_id>/purchases')

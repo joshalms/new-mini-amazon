@@ -5,6 +5,7 @@
   <h2>Edit Product: {{ product.name }}</h2>
 
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-3">
       <label for="quantity" class="form-label">Quantity</label>
       <input type="number" class="form-control" id="quantity" name="quantity" value="{{ inventory_item.quantity }}" required min="1">

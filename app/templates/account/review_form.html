@@ -19,6 +19,7 @@
   </div>
 
   <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label for="rating">Rating</label>
       <select class="form-control" id="rating" name="rating" required>
