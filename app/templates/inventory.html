@@ -32,12 +32,19 @@
         <td>${{ '%.2f' % item.price }}</td>
         <td>{{ item.quantity }}</td>
         <td>
-          <a href="{{ url_for('inventory.edit_product', user_id=owner_id, product_id=item.product_id) }}" class="btn btn-warning btn-sm">Edit</a>
-          
-          <form action="{{ url_for('inventory.remove_product', user_id=owner_id, product_id=item.product_id) }}" method="POST" style="display:inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove this product?')">Remove</button>
-          </form>
+          {% if g.user and g.user.id == owner_id %}
+            <a href="{{ url_for('inventory.edit_product', user_id=owner_id, product_id=item.product_id) }}" class="btn btn-warning btn-sm">Edit</a>
+            
+            <form action="{{ url_for('inventory.remove_product', user_id=owner_id, product_id=item.product_id) }}" method="POST" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove this product?')">Remove</button>
+            </form>
+          {% else %}
+            <form action="{{ url_for('cart.add_to_cart', product_id=item.product_id) }}" method="POST" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-primary btn-sm">Add to Cart</button>
+            </form>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
@@ -49,14 +56,14 @@
   </p>
   {% endif %}
 
-  <!-- Pagination and Buttons Section -->
-  <div class="mt-4 d-flex justify-content-between align-items-center">
+  {% if g.user and g.user.id == owner_id %}
+  <div class="mt-4 d-flex justify-content-between align-items-center flex-wrap">
     <!-- Add New Product Button -->
     <a href="{{ url_for('inventory.add_product', user_id=owner_id) }}" class="btn btn-primary">Add New Product</a>
     
     <!-- Pagination Controls -->
-    <nav aria-label="Inventory pagination">
-      <ul class="pagination justify-content-center">
+    <nav aria-label="Inventory pagination" class="flex-grow-1 mx-3">
+      <ul class="pagination justify-content-center mb-0">
         {% set prev_page = page - 1 %}
         {% set next_page = page + 1 %}
         <li class="page-item {{ 'disabled' if page <= 1 }}">
@@ -74,6 +81,26 @@
     <!-- View Order History Button -->
     <a href="{{ url_for('inventory.view_orders', user_id=owner_id) }}" class="btn btn-primary">View Order History</a>
   </div>
+  {% else %}
+    <!-- Non-owner pagination only -->
+    <div class="mt-4 d-flex justify-content-center">
+      <nav aria-label="Inventory pagination">
+        <ul class="pagination mb-0">
+          {% set prev_page = page - 1 %}
+          {% set next_page = page + 1 %}
+          <li class="page-item {{ 'disabled' if page <= 1 }}">
+            <a class="page-link" href="{{ url_for('inventory.view_inventory', user_id=owner_id, page=prev_page if page > 1 else 1) }}">Previous</a>
+          </li>
+          <li class="page-item active">
+            <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
+          </li>
+          <li class="page-item {{ 'disabled' if page >= total_pages }}">
+            <a class="page-link" href="{{ url_for('inventory.view_inventory', user_id=owner_id, page=next_page if page < total_pages else total_pages) }}">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
 
 </div>
 {% endblock %}
