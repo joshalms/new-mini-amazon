@@ -70,23 +70,21 @@ def get_inventory_item(user_id, product_id):
 def add_product_to_inventory(user_id, product_id, quantity):
     with app.db.engine.begin() as conn:
         result = conn.execute(text("""
-            SELECT quantity FROM Inventory WHERE user_id = :uid AND product_id = :pid
+            SELECT quantity FROM Inventory 
+            WHERE user_id = :uid AND product_id = :pid
         """), {"uid": user_id, "pid": product_id})
 
-        existing_quantity = result.fetchone()
+        existing = result.fetchone()
 
-        if existing_quantity: 
-            new_quantity = existing_quantity[0] + quantity
-            conn.execute(text("""
-                UPDATE Inventory 
-                SET quantity = :qty 
-                WHERE user_id = :uid AND product_id = :pid
-            """), {"qty": new_quantity, "uid": user_id, "pid": product_id})
-        else:
-            conn.execute(text("""
-                INSERT INTO Inventory (user_id, product_id, quantity) 
-                VALUES (:uid, :pid, :qty)
-            """), {"uid": user_id, "pid": product_id, "qty": quantity})
+        if existing:
+            return False  
+
+        conn.execute(text("""
+            INSERT INTO Inventory (user_id, product_id, quantity) 
+            VALUES (:uid, :pid, :qty)
+        """), {"uid": user_id, "pid": product_id, "qty": quantity})
+
+        return True
 
 def update_product_quantity(user_id, product_id, new_quantity):
     with app.db.engine.begin() as conn:
@@ -139,10 +137,6 @@ def get_orders_for_seller(
     start_date=None,
     end_date=None,
 ):
-    """
-    Retrieve paginated orders for a seller with optional filters (item name, seller name, date range).
-    The function returns the orders with their line items and summary information.
-    """
     try:
         limit_val = int(limit)
     except (TypeError, ValueError):

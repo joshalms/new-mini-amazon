@@ -26,14 +26,14 @@ def add_product(user_id):
         quantity = int(request.form['quantity'])
         available = request.form['available'] == 'true'
 
+        # Check if product exists in Products
         rows = app.db.execute("""
             SELECT id FROM Products WHERE name = :name
         """, name=name)
 
-        if rows and len(rows) > 0:
+        if rows:
             product_id = rows[0][0]
         else:
-
             app.db.execute("""
                 INSERT INTO Products (name, price, available)
                 VALUES (:name, :price, :available)
@@ -42,16 +42,35 @@ def add_product(user_id):
             rows = app.db.execute("""
                 SELECT id FROM Products WHERE name = :name
             """, name=name)
-            if rows and len(rows) > 0:
-                product_id = rows[0][0]  
-            else:
+
+            if not rows:
                 raise Exception("Product could not be created or fetched.")
 
-        add_product_to_inventory(user_id, product_id, quantity)
+            product_id = rows[0][0]
 
-        return redirect(url_for('inventory.view_inventory', user_id=user_id))
+        # Check inventory duplicate
+        existing = app.db.execute("""
+            SELECT 1 FROM Inventory 
+            WHERE user_id = :uid AND product_id = :pid
+        """, uid=user_id, pid=product_id)
 
-    return render_template('add_product.html', user_id=user_id)
+        if existing:
+            # ⛔ Return error on SAME PAGE
+            return render_template(
+                "add_product.html",
+                user_id=user_id,
+                error="This product is already in your inventory."
+            )
+
+        # Otherwise add
+        app.db.execute("""
+            INSERT INTO Inventory (user_id, product_id, quantity)
+            VALUES (:uid, :pid, :qty)
+        """, uid=user_id, pid=product_id, qty=quantity)
+
+        return redirect(url_for("inventory.view_inventory", user_id=user_id))
+
+    return render_template("add_product.html", user_id=user_id)
 
 @bp.route('/users/<int:user_id>/inventory/<int:product_id>/remove', methods=['POST'])
 def remove_product(user_id, product_id):
