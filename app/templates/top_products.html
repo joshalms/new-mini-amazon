@@ -38,87 +38,185 @@
     <tbody id="products-body"></tbody>
 </table>
 
+<!-- Pagination controls -->
+<div id="pagination-controls" style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:20px;">
+
+    <div style="display:flex; gap:16px;">
+        <button id="prev-btn" class="btn btn-outline-secondary">Previous</button>
+        <span id="page-indicator" style="font-size:1.1rem; padding-top:7px;"></span>
+        <button id="next-btn" class="btn btn-outline-secondary">Next</button>
+    </div>
+
+    <!-- Page numbers appear here -->
+    <div id="page-numbers" style="margin-top:8px; text-align:center;"></div>
+</div>
+
 <script>
 const csrfToken = {{ csrf_token()|tojson }};
 
-// render helper
-function renderProducts(products) {
-    const tbody = document.getElementById('products-body');
-    tbody.innerHTML = '';
+let allProducts = [];
+let currentPage = 1;
+const perPage = 50;
 
-    if (!products || products.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="4">No products found.</td>`;
-        tbody.appendChild(tr);
-        return;
+// ---------------------- Rendering ----------------------
+
+function renderPage() {
+    const tbody = document.getElementById('products-body');
+    tbody.innerHTML = "";
+
+    const start = (currentPage - 1) * perPage;
+    const pageProducts = allProducts.slice(start, start + perPage);
+
+    if (pageProducts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4">No products found.</td></tr>`;
+    } else {
+        pageProducts.forEach(product => {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td><a href="/products/${product.id}">${product.name}</a></td>
+                <td>${product.price}</td>
+                <td>${product.available ? "Yes" : "No"}</td>
+                <td>
+                    <div style="display:flex; gap:8px; justify-content:center;">
+                        ${product.available ? `
+                        <form action="/cart/add/${product.id}" method="POST" style="margin:0;">
+                          <input type="hidden" name="csrf_token" value="${csrfToken}">
+                          <input type="submit" value="Add to Cart" class="btn btn-sm btn-primary"/>
+                        </form>` : ''}
+
+                        <form action="/wishlist/add/${product.id}" method="POST" style="margin:0;">
+                          <input type="hidden" name="csrf_token" value="${csrfToken}">
+                          <input type="submit" value="Wishlist" class="btn btn-sm btn-success"/>
+                        </form>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 
-    products.forEach(product => {
-        const tr = document.createElement('tr');
-
-        tr.innerHTML = `
-            <td><a href="/products/${product.id}">${product.name}</a></td>
-            <td>${product.price}</td>
-            <td>${product.available ? "Yes" : "No"}</td>
-            <td>
-              <div style="display:flex; gap:8px; justify-content:center;">
-                ${product.available ? `
-                <form action="/cart/add/${product.id}" method="POST" style="margin:0;">
-                  <input type="hidden" name="csrf_token" value="${csrfToken}">
-                  <input type="submit" value="Add to Cart" class="btn btn-sm btn-primary"/>
-                </form>` : ''}
-
-                <form action="/wishlist/add/${product.id}" method="POST" style="margin:0;">
-                  <input type="hidden" name="csrf_token" value="${csrfToken}">
-                  <input type="submit" value="Wishlist" class="btn btn-sm btn-success"/>
-                </form>
-              </div>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+    updatePaginationControls();
 }
 
-// API utilities
+// ---------------------- Pagination Controls ----------------------
+
+function updatePaginationControls() {
+    const totalPages = Math.ceil(allProducts.length / perPage);
+
+    document.getElementById("page-indicator").textContent =
+        `Page ${currentPage} of ${totalPages || 1}`;
+
+    document.getElementById("prev-btn").disabled = currentPage <= 1;
+    document.getElementById("next-btn").disabled = currentPage >= totalPages;
+
+    buildPageNumberButtons(totalPages);
+}
+
+function buildPageNumberButtons(totalPages) {
+    const container = document.getElementById("page-numbers");
+    container.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    const maxButtons = 7;
+    let start = Math.max(1, currentPage - 3);
+    let end = Math.min(totalPages, start + maxButtons - 1);
+
+    if (end - start < maxButtons - 1) {
+        start = Math.max(1, end - maxButtons + 1);
+    }
+
+    if (start > 1) {
+        addPageBtn(container, 1);
+        if (start > 2) container.append(" ... ");
+    }
+
+    for (let i = start; i <= end; i++) {
+        addPageBtn(container, i, i === currentPage);
+    }
+
+    if (end < totalPages) {
+        if (end < totalPages - 1) container.append(" ... ");
+        addPageBtn(container, totalPages);
+    }
+}
+
+function addPageBtn(container, page, active=false) {
+    const btn = document.createElement("button");
+    btn.textContent = page;
+    btn.className = active ? "btn btn-primary btn-sm" : "btn btn-outline-secondary btn-sm";
+    btn.style.margin = "0 4px";
+    btn.addEventListener("click", () => {
+        currentPage = page;
+        renderPage();
+    });
+    container.appendChild(btn);
+}
+
+// ---------------------- API ----------------------
+
 async function fetchFiltered(sort='price_high') {
     const res = await fetch(`/api/products/filter?sort=${encodeURIComponent(sort)}`);
-    if (!res.ok) return [];
-    return res.json();
+    return res.ok ? res.json() : [];
 }
 
 async function fetchSearch(q) {
     const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}`);
-    if (!res.ok) return [];
-    return res.json();
+    return res.ok ? res.json() : [];
 }
 
-// init
+// ---------------------- Load and Render ----------------------
+
+async function loadAndRender(productsPromise) {
+    allProducts = await productsPromise;
+    currentPage = 1;
+    renderPage();
+}
+
 async function init() {
-    const defaultSort = document.getElementById('sort-select').value;
-    renderProducts(await fetchFiltered(defaultSort));
+    const sort = document.getElementById('sort-select').value;
+    await loadAndRender(fetchFiltered(sort));
 }
 init();
 
-// Sort change
+// Sort events
 document.getElementById('sort-select').addEventListener('change', async (e) => {
-    renderProducts(await fetchFiltered(e.target.value));
+    loadAndRender(fetchFiltered(e.target.value));
 });
 
-// Search
+// Search events
 document.getElementById('search-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const q = document.getElementById('search-box').value.trim();
+
     if (!q) {
-        renderProducts(await fetchFiltered(document.getElementById('sort-select').value));
-        return;
+        loadAndRender(fetchFiltered(document.getElementById('sort-select').value));
+    } else {
+        loadAndRender(fetchSearch(q));
     }
-    renderProducts(await fetchSearch(q));
 });
 
 // Clear search
-document.getElementById('clear-search-btn').addEventListener('click', async () => {
-    document.getElementById('search-box').value = '';
-    renderProducts(await fetchFiltered(document.getElementById('sort-select').value));
+document.getElementById('clear-search-btn').addEventListener('click', () => {
+    document.getElementById('search-box').value = "";
+    loadAndRender(fetchFiltered(document.getElementById('sort-select').value));
+});
+
+// Prev/Next
+document.getElementById("prev-btn").addEventListener("click", () => {
+    if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+    }
+});
+
+document.getElementById("next-btn").addEventListener("click", () => {
+    const totalPages = Math.ceil(allProducts.length / perPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+    }
 });
 </script>
 {% endblock %}
