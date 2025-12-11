@@ -4,6 +4,12 @@
 <div class="container" style="max-width: 720px; margin-top: 40px;">
   <h2>Add a New Product</h2>
 
+  {% if error %}
+  <div class="alert alert-danger mt-3">
+    {{ error }}
+  </div>
+  {% endif %}
+
   <form method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-3">
@@ -29,7 +35,18 @@
       </select>
     </div>
 
-    <button type="submit" class="btn btn-primary">Add Product</button>
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <!-- Back button on the left -->
+      <a href="{{ url_for('inventory.view_inventory', user_id=user_id) }}" 
+         class="btn btn-secondary">
+        Back to Inventory
+      </a>
+    
+      <!-- Submit button on the right -->
+      <button type="submit" class="btn btn-primary">
+        Add Product
+      </button>
+    </div>
   </form>
 </div>
 {% endblock %}

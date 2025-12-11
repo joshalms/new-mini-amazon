@@ -1,6 +1,6 @@
 from flask import current_app as app
-from flask import Blueprint, jsonify, request, render_template, redirect, url_for
-from app.models.inventory import get_inventory_for_user, add_product_to_inventory, update_product_quantity, remove_product_from_inventory, get_product_by_id, get_inventory_item, get_orders_for_seller, get_order_details, mark_line_item_as_fulfilled
+from flask import Blueprint, jsonify, request, render_template, redirect, url_for, flash
+from app.models.inventory import get_inventory_for_user, add_product_to_inventory, update_product_quantity, remove_product_from_inventory, get_product_by_id, get_inventory_item, get_orders_for_seller, get_order_details, mark_line_item_as_fulfilled, get_order_analytics, get_top_buyers
 from math import ceil
 
 bp = Blueprint('inventory', __name__)
@@ -26,14 +26,14 @@ def add_product(user_id):
         quantity = int(request.form['quantity'])
         available = request.form['available'] == 'true'
 
+        # Check if product exists in Products
         rows = app.db.execute("""
             SELECT id FROM Products WHERE name = :name
         """, name=name)
 
-        if rows and len(rows) > 0:
+        if rows:
             product_id = rows[0][0]
         else:
-
             app.db.execute("""
                 INSERT INTO Products (name, price, available)
                 VALUES (:name, :price, :available)
@@ -42,21 +42,47 @@ def add_product(user_id):
             rows = app.db.execute("""
                 SELECT id FROM Products WHERE name = :name
             """, name=name)
-            if rows and len(rows) > 0:
-                product_id = rows[0][0]  
-            else:
+
+            if not rows:
                 raise Exception("Product could not be created or fetched.")
 
-        add_product_to_inventory(user_id, product_id, quantity)
+            product_id = rows[0][0]
 
-        return redirect(url_for('inventory.view_inventory', user_id=user_id))
+        # Check inventory duplicate
+        existing = app.db.execute("""
+            SELECT 1 FROM Inventory 
+            WHERE user_id = :uid AND product_id = :pid
+        """, uid=user_id, pid=product_id)
 
-    return render_template('add_product.html', user_id=user_id)
+        if existing:
+            return render_template(
+                "add_product.html",
+                user_id=user_id,
+                error="This product is already in your inventory."
+            )
+
+        # Otherwise add
+        app.db.execute("""
+            INSERT INTO Inventory (user_id, product_id, quantity)
+            VALUES (:uid, :pid, :qty)
+        """, uid=user_id, pid=product_id, qty=quantity)
+
+        return redirect(url_for("inventory.view_inventory", user_id=user_id))
+
+    return render_template("add_product.html", user_id=user_id)
 
 @bp.route('/users/<int:user_id>/inventory/<int:product_id>/remove', methods=['POST'])
 def remove_product(user_id, product_id):
-    remove_product_from_inventory(user_id, product_id)
+    try:
+        # Attempt to remove the product
+        remove_product_from_inventory(user_id, product_id)
+        flash("Product removed from inventory.", "success")
+    except Exception as e:
+        # If the function raises an error (e.g., outstanding order)
+        flash(str(e), "danger")  # Display the message in a popup/alert
+
     return redirect(url_for('inventory.view_inventory', user_id=user_id))
+
 
 @bp.route('/users/<int:user_id>/inventory/<int:product_id>/edit', methods=['GET', 'POST'])
 def edit_product(user_id, product_id):
@@ -72,6 +98,22 @@ def edit_product(user_id, product_id):
                            user_id=user_id, 
                            product=product, 
                            inventory_item=inventory_item)
+
+# INVENTORY ANALYTICS
+@bp.route('/users/<int:user_id>/analytics/orders')
+def view_order_analytics(user_id):
+    top_products = get_order_analytics(user_id)
+    return render_template(
+        'order_analytics.html',
+        user_id=user_id,
+        top_products=top_products,
+    )
+
+# SELLER ANALYTICS
+@bp.route('/users/<int:user_id>/analytics/sellers')
+def view_seller_analytics(user_id):
+    buyer_stats = get_top_buyers(user_id)
+    return render_template('seller_analytics.html', user_id=user_id, buyer_stats=buyer_stats)
 
 #ORDER HISTORY/FULFILLMENT
 @bp.route('/users/<int:user_id>/orders', methods=['GET'])
