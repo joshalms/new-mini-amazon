@@ -1,158 +1,124 @@
 {% extends "base.html" %}
 
 {% block content %}
+<h1>Top Products</h1>
 
-<h1 class="mb-4">Top Products</h1>
-
-<!-- Controls Row -->
-
-<div class="d-flex flex-wrap gap-3 align-items-center mb-3">
-
-  <!-- Search Form -->
-
-  <form id="search-form" class="d-flex gap-2 align-items-center m-0">
-    <input id="search-box"
-           name="q"
-           type="search"
-           placeholder="Search products..."
-           class="form-control"
+<div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:18px;">
+  
+  <!-- Search form -->
+  <form id="search-form" style="display:flex; gap:8px; align-items:center; margin:0;">
+    <input id="search-box" name="q" type="search"
+           placeholder="Search products..." class="form-control"
            style="max-width:320px;">
-    <button id="search-btn" type="submit" class="btn btn-primary btn-sm">Search</button>
-    <button id="clear-search-btn" type="button" class="btn btn-outline-secondary btn-sm">Clear</button>
+    <button id="search-btn" type="submit" class="btn btn-primary">Search</button>
+    <button id="clear-search-btn" type="button" class="btn btn-light">Clear</button>
   </form>
 
-  <!-- Sort Dropdown -->
-
-  <div class="d-flex align-items-center gap-2">
-    <label for="sort-select" class="fw-semibold">Sort:</label>
-    <select id="sort-select" class="form-select form-select-sm" style="max-width:220px;">
-      <option value="price_high">Price: High → Low</option>
-      <option value="price_low">Price: Low → High</option>
-      <option value="az">A → Z</option>
-      <option value="za">Z → A</option>
-      <option value="rating">Avg Rating</option>
+  <!-- Sorting dropdown -->
+  <div style="display:flex; align-items:center; gap:6px;">
+    <label for="sort-select" style="margin:0;">Sort:</label>
+    <select id="sort-select" class="form-select" style="max-width:220px;">
+        <option value="price_high">Price: High → Low</option>
+        <option value="price_low">Price: Low → High</option>
+        <option value="az">A → Z</option>
+        <option value="za">Z → A</option>
     </select>
   </div>
-
 </div>
-
-<!-- Loading Indicator -->
-
-<div id="loading-indicator" class="text-muted mb-2" style="display:none;">
-  Loading…
-</div>
-
-<!-- Products Table -->
 
 <table id="products-table" class="table table-hover table-bordered container">
-  <thead class="table-light">
-    <tr>
-      <th>Product Name</th>
-      <th>Price</th>
-      <th>Available</th>
-      <th>Avg Rating</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="products-body">
-  </tbody>
+    <thead>
+      <tr>
+          <th>Product Name</th>
+          <th>Price</th>
+          <th>Available</th>
+          <th style="text-align:center;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="products-body"></tbody>
 </table>
 
 <script>
 const csrfToken = {{ csrf_token()|tojson }};
 
-// Show/Hide loading indicator
-function showLoading() {
-  document.getElementById("loading-indicator").style.display = "block";
-}
-function hideLoading() {
-  document.getElementById("loading-indicator").style.display = "none";
-}
-
-// Render products
+// render helper
 function renderProducts(products) {
-  const tbody = document.getElementById('products-body');
-  tbody.innerHTML = '';
+    const tbody = document.getElementById('products-body');
+    tbody.innerHTML = '';
 
-  if (!products || products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center">No products found.</td></tr>`;
-    return;
-  }
+    if (!products || products.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="4">No products found.</td>`;
+        tbody.appendChild(tr);
+        return;
+    }
 
-  products.forEach(product => {
-    const avg = (product.avg_rating == null)
-      ? "—"
-      : Number(product.avg_rating).toFixed(2);
+    products.forEach(product => {
+        const tr = document.createElement('tr');
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><a href="/products/${product.id}" class="fw-semibold">${product.name}</a></td>
-      <td>$${product.price}</td>
-      <td>${product.available ? "Yes" : "No"}</td>
-      <td>${avg}</td>
-      <td>
-        <div class="d-flex gap-2">
-          ${product.available ? `
-            <form action="/cart/add/${product.id}" method="POST" class="m-0">
-              <input type="hidden" name="csrf_token" value="${csrfToken}">
-              <button class="btn btn-sm btn-outline-primary">Add</button>
-            </form>
-          ` : ""}
-          <form action="/wishlist/add/${product.id}" method="POST" class="m-0">
-            <input type="hidden" name="csrf_token" value="${csrfToken}">
-            <button class="btn btn-sm btn-outline-secondary">Wish</button>
-          </form>
-        </div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+        tr.innerHTML = `
+            <td><a href="/products/${product.id}">${product.name}</a></td>
+            <td>${product.price}</td>
+            <td>${product.available ? "Yes" : "No"}</td>
+            <td>
+              <div style="display:flex; gap:8px; justify-content:center;">
+                ${product.available ? `
+                <form action="/cart/add/${product.id}" method="POST" style="margin:0;">
+                  <input type="hidden" name="csrf_token" value="${csrfToken}">
+                  <input type="submit" value="Add to Cart" class="btn btn-sm btn-primary"/>
+                </form>` : ''}
+
+                <form action="/wishlist/add/${product.id}" method="POST" style="margin:0;">
+                  <input type="hidden" name="csrf_token" value="${csrfToken}">
+                  <input type="submit" value="Wishlist" class="btn btn-sm btn-success"/>
+                </form>
+              </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
-// Fetch API calls
+// API utilities
 async function fetchFiltered(sort='price_high') {
-  showLoading();
-  const res = await fetch(`/api/products/filter?sort=${encodeURIComponent(sort)}`);
-  hideLoading();
-  return res.ok ? res.json() : [];
+    const res = await fetch(`/api/products/filter?sort=${encodeURIComponent(sort)}`);
+    if (!res.ok) return [];
+    return res.json();
 }
 
 async function fetchSearch(q) {
-  showLoading();
-  const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}`);
-  hideLoading();
-  return res.ok ? res.json() : [];
+    const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return [];
+    return res.json();
 }
 
-// Initialize page
+// init
 async function init() {
-  const defaultSort = document.getElementById('sort-select').value;
-  const products = await fetchFiltered(defaultSort);
-  renderProducts(products);
+    const defaultSort = document.getElementById('sort-select').value;
+    renderProducts(await fetchFiltered(defaultSort));
 }
 init();
 
-// Sort event
+// Sort change
 document.getElementById('sort-select').addEventListener('change', async (e) => {
-  const sort = e.target.value;
-  const products = await fetchFiltered(sort);
-  renderProducts(products);
+    renderProducts(await fetchFiltered(e.target.value));
 });
 
-// Search event
+// Search
 document.getElementById('search-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const q = document.getElementById('search-box').value.trim();
-  const products = q ? await fetchSearch(q) : await fetchFiltered(document.getElementById('sort-select').value);
-  renderProducts(products);
+    e.preventDefault();
+    const q = document.getElementById('search-box').value.trim();
+    if (!q) {
+        renderProducts(await fetchFiltered(document.getElementById('sort-select').value));
+        return;
+    }
+    renderProducts(await fetchSearch(q));
 });
 
 // Clear search
 document.getElementById('clear-search-btn').addEventListener('click', async () => {
-  document.getElementById('search-box').value = '';
-  const products = await fetchFiltered(document.getElementById('sort-select').value);
-  renderProducts(products);
+    document.getElementById('search-box').value = '';
+    renderProducts(await fetchFiltered(document.getElementById('sort-select').value));
 });
 </script>
-
 {% endblock %}
