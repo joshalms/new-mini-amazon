@@ -103,4 +103,4 @@ Code Breakdown:
         - Backend: cart_routes.py, models/cart.py
         - Frontend: templates/cart.html
 Demo Video:
-    - TO BE ADDED
+    - https://drive.google.com/file/d/1F_5EuqOB7I9AThVoJO7Rv29yLXyLmB6o/view?usp=sharing
