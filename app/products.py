@@ -77,3 +77,57 @@ def product_reviews(product_id):
         can_review=can_review,
         user_votes=user_votes,
     )
+    
+@bp.route('/api/products/search')
+def search_products():
+    query = request.args.get('q', '').strip()
+
+    if not query:
+        return jsonify([])
+
+    products = Product.search_by_name(query)  # You may need to implement this
+
+    return jsonify([
+        {
+            "id": p.id,
+            "name": p.name,
+            "price": p.price,
+            "available": p.available
+        }
+        for p in products
+    ])
+    
+@bp.route('/api/products/filter')
+def filter_products():
+    sort = request.args.get('sort', 'az')
+
+    products = Product.get_all()  # or your actual method
+
+    if sort == "az":
+        products = sorted(products, key=lambda p: p.name)
+    elif sort == "za":
+        products = sorted(products, key=lambda p: p.name, reverse=True)
+    elif sort == "price_low":
+        products = sorted(products, key=lambda p: p.price)
+    elif sort == "price_high":
+        products = sorted(products, key=lambda p: p.price, reverse=True)
+    elif sort == "rating":
+        products = sorted(products, key=lambda p: p.avg_rating or 0, reverse=True)
+
+    return jsonify([
+        {
+            "id": p.id,
+            "name": p.name,
+            "price": p.price,
+            "available": p.available
+        }
+        for p in products
+    ])
+
+@bp.route('/products/<int:product_id>')
+def product_detail(product_id):
+    product = Product.get(product_id)
+    if not product:
+        abort(404)
+    return render_template("product_detail.html", product=product)
+
