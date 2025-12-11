@@ -17,11 +17,12 @@
   <!-- Sorting dropdown -->
   <div style="display:flex; align-items:center; gap:6px;">
     <label for="sort-select" style="margin:0;">Sort:</label>
-    <select id="sort-select" class="form-select" style="max-width:220px;">
+    <select id="sort-select" class="form-select" style="max-width:260px;">
         <option value="price_high">Price: High → Low</option>
         <option value="price_low">Price: Low → High</option>
         <option value="az">A → Z</option>
         <option value="za">Z → A</option>
+        <option value="available_only">Available Only</option>
     </select>
   </div>
 </div>
@@ -47,19 +48,16 @@
         <button id="next-btn" class="btn btn-outline-secondary">Next</button>
     </div>
 
-    <!-- Page numbers appear here -->
     <div id="page-numbers" style="margin-top:8px; text-align:center;"></div>
 </div>
 
 <script>
 const csrfToken = {{ csrf_token()|tojson }};
-
 let allProducts = [];
 let currentPage = 1;
 const perPage = 50;
 
-// ---------------------- Rendering ----------------------
-
+// ---------- Rendering ----------
 function renderPage() {
     const tbody = document.getElementById('products-body');
     tbody.innerHTML = "";
@@ -99,11 +97,9 @@ function renderPage() {
     updatePaginationControls();
 }
 
-// ---------------------- Pagination Controls ----------------------
-
+// ---------- Pagination ----------
 function updatePaginationControls() {
     const totalPages = Math.ceil(allProducts.length / perPage);
-
     document.getElementById("page-indicator").textContent =
         `Page ${currentPage} of ${totalPages || 1}`;
 
@@ -147,17 +143,18 @@ function addPageBtn(container, page, active=false) {
     btn.textContent = page;
     btn.className = active ? "btn btn-primary btn-sm" : "btn btn-outline-secondary btn-sm";
     btn.style.margin = "0 4px";
-    btn.addEventListener("click", () => {
-        currentPage = page;
-        renderPage();
-    });
+    btn.onclick = () => { currentPage = page; renderPage(); };
     container.appendChild(btn);
 }
 
-// ---------------------- API ----------------------
-
+// ---------- API ----------
 async function fetchFiltered(sort='price_high') {
-    const res = await fetch(`/api/products/filter?sort=${encodeURIComponent(sort)}`);
+    let url = `/api/products/filter?sort=${encodeURIComponent(sort)}`;
+    return (await fetch(url)).json();
+}
+
+async function fetchAvailableOnly() {
+    const res = await fetch(`/api/products/available`);
     return res.ok ? res.json() : [];
 }
 
@@ -166,57 +163,65 @@ async function fetchSearch(q) {
     return res.ok ? res.json() : [];
 }
 
-// ---------------------- Load and Render ----------------------
-
-async function loadAndRender(productsPromise) {
-    allProducts = await productsPromise;
+// ---------- Load ----------
+async function loadAndRender(promise) {
+    allProducts = await promise;
     currentPage = 1;
     renderPage();
 }
 
 async function init() {
-    const sort = document.getElementById('sort-select').value;
-    await loadAndRender(fetchFiltered(sort));
+    await loadAndRender(fetchFiltered("price_high"));
 }
 init();
 
-// Sort events
-document.getElementById('sort-select').addEventListener('change', async (e) => {
-    loadAndRender(fetchFiltered(e.target.value));
+// ---------- Events ----------
+document.getElementById("sort-select").addEventListener("change", async e => {
+    const val = e.target.value;
+
+    if (val === "available_only") {
+        loadAndRender(fetchAvailableOnly());
+    } else {
+        loadAndRender(fetchFiltered(val));
+    }
 });
 
-// Search events
-document.getElementById('search-form').addEventListener('submit', async (e) => {
+document.getElementById("search-form").addEventListener("submit", async e => {
     e.preventDefault();
-    const q = document.getElementById('search-box').value.trim();
+    const q = document.getElementById("search-box").value.trim();
 
     if (!q) {
-        loadAndRender(fetchFiltered(document.getElementById('sort-select').value));
+        const sort = document.getElementById('sort-select').value;
+        if (sort === "available_only") loadAndRender(fetchAvailableOnly());
+        else loadAndRender(fetchFiltered(sort));
     } else {
         loadAndRender(fetchSearch(q));
     }
 });
 
 // Clear search
-document.getElementById('clear-search-btn').addEventListener('click', () => {
-    document.getElementById('search-box').value = "";
-    loadAndRender(fetchFiltered(document.getElementById('sort-select').value));
+document.getElementById("clear-search-btn").addEventListener("click", () => {
+    document.getElementById("search-box").value = "";
+    const sort = document.getElementById('sort-select').value;
+
+    if (sort === "available_only") loadAndRender(fetchAvailableOnly());
+    else loadAndRender(fetchFiltered(sort));
 });
 
 // Prev/Next
-document.getElementById("prev-btn").addEventListener("click", () => {
+document.getElementById("prev-btn").onclick = function () {
     if (currentPage > 1) {
         currentPage--;
         renderPage();
     }
-});
+};
 
-document.getElementById("next-btn").addEventListener("click", () => {
+document.getElementById("next-btn").onclick = function () {
     const totalPages = Math.ceil(allProducts.length / perPage);
     if (currentPage < totalPages) {
         currentPage++;
         renderPage();
     }
-});
+};
 </script>
 {% endblock %}

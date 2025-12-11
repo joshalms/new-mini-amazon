@@ -6,35 +6,37 @@ _FEATURED_CACHE = {}
 
 
 class Product:
-    def __init__(self, id, name, price, available, average_rating=None):
+    def __init__(self, id, name, price, available, image_url=None, description=None, average_rating=None):
         self.id = id
         self.name = name
         self.price = price
         self.available = available
+        self.image_url = image_url
+        self.description = description
         self.average_rating = average_rating
+
 
     @staticmethod
     def get(id):
-        rows = app.db.execute('''
-SELECT id, name, price, available
+     rows = app.db.execute('''
+SELECT id, name, price, available, image_url, description
 FROM Products
-WHERE id = :id
-''',
-                              id=id)
-        return Product(*(rows[0])) if rows is not None else None
+WHERE id = :id;
+''', id=id)
+     return Product(*rows[0]) if rows else None
 
     @staticmethod
     def get_all(available=True):
-        rows = app.db.execute('''
-SELECT p.id, p.name, p.price, p.available, AVG(pr.rating) AS average_rating
+     rows = app.db.execute('''
+SELECT p.id, p.name, p.price, p.available, p.image_url, p.description, AVG(pr.rating) AS average_rating
 FROM Products p
 LEFT JOIN product_review pr ON pr.product_id = p.id
 WHERE p.available = :available
-GROUP BY p.id, p.name, p.price, p.available
+GROUP BY p.id, p.name, p.price, p.available, p.image_url, p.description
 ORDER BY p.id
-''',
-                              available=available)
-        return [Product(*row) for row in rows]
+''', available=available)
+     return [Product(*row) for row in rows]
+
 
     @staticmethod
     def get_top_k_expensive(k):
@@ -62,17 +64,16 @@ LIMIT :k
         if cached and cached['expires_at'] > now:
             return cached['rows']
 
-        rows = app.db.execute(
-            '''
-SELECT p.id, p.name, p.price, p.available, AVG(pr.rating) AS average_rating
+        rows = app.db.execute('''
+SELECT p.id, p.name, p.price, p.available, p.image_url, p.description, AVG(pr.rating) AS average_rating
 FROM Products p
 LEFT JOIN product_review pr ON pr.product_id = p.id
 WHERE p.available = TRUE
-GROUP BY p.id, p.name, p.price, p.available
+GROUP BY p.id, p.name, p.price, p.available, p.image_url, p.description
 ORDER BY p.id
 LIMIT :limit
-''',
-            limit=limit_val,
+''', limit=limit_val,
+
         )
         result = [Product(*row) for row in rows]
         _FEATURED_CACHE[cache_key] = {
