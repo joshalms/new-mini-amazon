@@ -35,15 +35,18 @@ WHERE email = :email
         return user, password_hash
 
     @staticmethod
-    def email_exists(email):
-        rows = app.db.execute(
-            """
+    def email_exists(email, exclude_user_id=None):
+        query = """
 SELECT 1
 FROM Users
 WHERE email = :email
-""",
-            email=email,
-        )
+"""
+        params = {'email': email}
+        if exclude_user_id is not None:
+            query += " AND id <> :exclude_user_id"
+            params['exclude_user_id'] = exclude_user_id
+
+        rows = app.db.execute(query, **params)
         return len(rows) > 0
 
     @staticmethod
@@ -62,18 +65,26 @@ RETURNING id
         return User.get(rows[0][0]) if rows else None
 
     @staticmethod
-    def update_profile(user_id, full_name, address):
+    def update_profile(user_id, full_name, address, email=None):
+        params = {
+            'full_name': full_name,
+            'address': address,
+            'user_id': user_id,
+        }
+        email_clause = ''
+        if email is not None:
+            email_clause = ", email = :email"
+            params['email'] = email
+
         rows = app.db.execute(
-            """
+            f"""
 UPDATE Users
 SET full_name = :full_name,
-    address = :address
+    address = :address{email_clause}
 WHERE id = :user_id
 RETURNING id
 """,
-            full_name=full_name,
-            address=address,
-            user_id=user_id,
+            **params,
         )
         return len(rows) == 1
 
