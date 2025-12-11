@@ -24,7 +24,7 @@ class Product:
                    p.available,
                    p.image_url,
                    p.description,
-                   AVG(pr.rating) AS average_rating,
+                   AVG(pr.rating) AS average_rating
             FROM Products p
             LEFT JOIN product_review pr ON pr.product_id = p.id
             WHERE p.id = :id
@@ -41,7 +41,7 @@ class Product:
                    p.available,
                    p.image_url,
                    p.description,
-                   AVG(pr.rating) AS average_rating,
+                   AVG(pr.rating) AS average_rating
             FROM Products p
             LEFT JOIN product_review pr ON pr.product_id = p.id
             WHERE p.available = :available
@@ -83,7 +83,7 @@ class Product:
                    p.available,
                    p.image_url,
                    p.description,
-                   AVG(pr.rating) AS average_rating,
+                   AVG(pr.rating) AS average_rating
             FROM Products p
             LEFT JOIN product_review pr ON pr.product_id = p.id
             WHERE p.available = TRUE
