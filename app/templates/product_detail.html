@@ -6,15 +6,7 @@
 ```
 <!-- IMAGE -->
 <div class="col-md-4">
-    {% if product.image_url %}
-        <img src="{{ product.image_url }}" 
-             alt="{{ product.name }}" 
-             class="img-fluid mb-3 rounded shadow-sm">
-    {% else %}
-        <img src="/static/no-image.png" 
-             alt="No image available"
-             class="img-fluid mb-3 rounded shadow-sm">
-    {% endif %}
+    <img src="hhttps://www.theendlessmeal.com/wp-content/uploads/2025/06/vanilla-ice-cream-recipe-3-500x500.jpg" alt="Vanilla Ice Cream">
 </div>
 
 <!-- DETAILS -->
@@ -32,20 +24,15 @@
         {% endif %}
     </p>
 
-    {% if product.description %}
-        <p class="mt-3">{{ product.description }}</p>
-    {% else %}
-        <p class="mt-3 text-muted">No description available.</p>
-    {% endif %}
+    <p>Vanilla Ice Cream is a high-quality product designed for everyday use. Customers love its reliability and performance.</p>
+
 
     <form action="/cart/add/{{ product.id }}" method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-primary btn-lg">Add to Cart</button>
     </form>
 
-    <a href="/products/{{ product.id }}/reviews" class="btn btn-outline-secondary mt-3">
-        View Reviews
-    </a>
+    
 </div>
 ```
 
