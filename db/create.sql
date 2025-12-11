@@ -43,7 +43,9 @@ create table products (
     name text unique not null,
     price decimal(12,2) not null,
     available boolean default true,
-    
+    image_url text,
+    description text
+
 );
 
 ALTER TABLE products ADD COLUMN image_url TEXT;
