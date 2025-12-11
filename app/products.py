@@ -29,7 +29,9 @@ def top_k_products():
         for p in products:
             # try to get average rating via product_review summary
             summary = product_review.get_summary_for_product(p.id) if hasattr(product_review, 'get_summary_for_product') else {}
-            avg = summary.get('avg') or summary.get('avg_rating') or None
+            avg = None
+            if summary:
+                avg = summary.get('avg_rating') or summary.get('avg') or None
             output.append({
                 "id": p.id,
                 "name": p.name,

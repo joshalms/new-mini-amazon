@@ -145,3 +145,6 @@ CREATE INDEX IF NOT EXISTS idx_order_items_seller_id ON order_items (seller_id);
 CREATE INDEX IF NOT EXISTS idx_products_name_lower ON products (LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_product_review_vote_review ON product_review_vote (review_id);
 CREATE INDEX IF NOT EXISTS idx_seller_review_vote_review ON seller_review_vote (review_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_productid ON product_reviews (product_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_productid_date ON product_reviews (product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_productid_rating ON product_reviews (product_id, rating);
