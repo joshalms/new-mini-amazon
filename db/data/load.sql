@@ -51,7 +51,10 @@ SELECT pg_catalog.setval('public.product_review_id_seq',
 
 \COPY seller_review_vote (user_id, review_id, vote_value, created_at) FROM 'SellerReviewVotes.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
 
+\COPY products (id, name, price, available) FROM 'Products.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
+
 \COPY products (id, image_url) FROM 'Product_images.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',', NULL '');
 
 \COPY products (id, description) FROM 'Products_descriptions.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',', NULL '');
+
 
