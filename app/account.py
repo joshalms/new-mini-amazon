@@ -548,23 +548,48 @@ def public_profile(user_id):
     if user is None:
         abort(404)
 
+    sort = request.args.get('sort', 'date')
     purchase_summary = purchases.get_purchase_summary(user_id)
     seller_summary = seller_review.get_summary_for_seller(user_id)
-    seller_reviews = seller_review.get_recent_reviews_for_seller(user_id, limit=10)
+    seller_reviews_list = seller_review.get_recent_reviews_for_seller(user_id, limit=10, sort=sort)
+
+    # check if logged-in user can review this seller
+    user_review = None
+    review_url = None
+    can_review = False
+    user_votes = {}
+
+    if g.user and g.user.id != user_id:
+        user_review = seller_review.get_user_review_for_seller(g.user.id, user_id)
+        order_info = purchases.get_user_order_with_seller(g.user.id, user_id)
+        if order_info:
+            can_review = True
+            review_url = url_for(
+                'account.review_seller',
+                order_id=order_info['order_id'],
+                seller_id=user_id,
+            )
+    if g.user:
+        user_votes = seller_review.get_user_votes_for_seller(g.user.id, user_id)
 
     return render_template(
         'account/public_user.html',
         user=user,
         purchase_summary=purchase_summary,
         seller_summary=seller_summary,
-        seller_reviews=seller_reviews,
+        seller_reviews=seller_reviews_list,
+        current_sort=sort,
+        user_review=user_review,
+        review_url=review_url,
+        can_review=can_review,
+        user_votes=user_votes,
     )
 
 
 @bp.route('/account/orders/<int:order_id>/review-product/<int:product_id>', methods=['GET', 'POST'])
 @login_required
 def review_product(order_id, product_id):
-    order = _get_order_detail(order_id)
+    order = purchases.get_order_detail(order_id)
     if order is None:
         abort(404)
     if order['buyer']['id'] != g.user.id:
@@ -600,7 +625,7 @@ def review_product(order_id, product_id):
 @bp.route('/account/orders/<int:order_id>/review-seller/<int:seller_id>', methods=['GET', 'POST'])
 @login_required
 def review_seller(order_id, seller_id):
-    order = _get_order_detail(order_id)
+    order = purchases.get_order_detail(order_id)
     if order is None:
         abort(404)
     if order['buyer']['id'] != g.user.id:
@@ -631,3 +656,108 @@ def review_seller(order_id, seller_id):
         review=existing,
         review_type='seller',
     )
+
+
+@bp.route('/account/reviews/product/<int:review_id>/delete', methods=['POST'])
+@login_required
+def delete_product_review(review_id):
+    existing = product_review.get_review_by_id(review_id)
+    if existing is None:
+        abort(404)
+    if existing['user_id'] != g.user.id:
+        abort(403)
+
+    product_review.delete_review(review_id)
+    flash('Review deleted.', 'success')
+
+    next_url = request.form.get('next') or url_for('account.my_reviews')
+    return redirect(next_url)
+
+
+@bp.route('/account/reviews/seller/<int:review_id>/delete', methods=['POST'])
+@login_required
+def delete_seller_review(review_id):
+    existing = seller_review.get_review_by_id(review_id)
+    if existing is None:
+        abort(404)
+    if existing['user_id'] != g.user.id:
+        abort(403)
+
+    seller_review.delete_review(review_id)
+    flash('Review deleted.', 'success')
+
+    next_url = request.form.get('next') or url_for('account.my_reviews')
+    return redirect(next_url)
+
+
+@bp.route('/account/reviews')
+@login_required
+def my_reviews():
+    sort = request.args.get('sort', 'date')
+    product_reviews = product_review.get_reviews_by_user(g.user.id, sort=sort)
+    seller_reviews = seller_review.get_reviews_by_user(g.user.id, sort=sort)
+
+    return render_template(
+        'account/my_reviews.html',
+        product_reviews=product_reviews,
+        seller_reviews=seller_reviews,
+        current_sort=sort,
+    )
+
+
+@bp.route('/api/reviews/product/<int:review_id>/vote', methods=['POST'])
+@login_required
+def vote_product_review(review_id):
+    review = product_review.get_review_by_id(review_id)
+    if review is None:
+        return jsonify({'error': 'review not found'}), 404
+
+    data = request.get_json() or {}
+    vote_value = data.get('vote', 0)
+    if vote_value not in (-1, 0, 1):
+        return jsonify({'error': 'invalid vote value'}), 400
+
+    current_vote = product_review.get_user_vote(g.user.id, review_id)
+    # if clicking same vote, remove it; otherwise set new vote
+    if current_vote == vote_value:
+        product_review.set_vote(g.user.id, review_id, 0)
+    else:
+        product_review.set_vote(g.user.id, review_id, vote_value)
+
+    counts = product_review.get_vote_counts(review_id)
+    new_vote = product_review.get_user_vote(g.user.id, review_id)
+
+    return jsonify({
+        'upvotes': counts['upvotes'],
+        'downvotes': counts['downvotes'],
+        'user_vote': new_vote,
+    })
+
+
+@bp.route('/api/reviews/seller/<int:review_id>/vote', methods=['POST'])
+@login_required
+def vote_seller_review(review_id):
+    review = seller_review.get_review_by_id(review_id)
+    if review is None:
+        return jsonify({'error': 'review not found'}), 404
+
+    data = request.get_json() or {}
+    vote_value = data.get('vote', 0)
+    if vote_value not in (-1, 0, 1):
+        return jsonify({'error': 'invalid vote value'}), 400
+
+    current_vote = seller_review.get_user_vote(g.user.id, review_id)
+    # if clicking same vote, remove it; otherwise set new vote
+    if current_vote == vote_value:
+        seller_review.set_vote(g.user.id, review_id, 0)
+    else:
+        seller_review.set_vote(g.user.id, review_id, vote_value)
+
+    counts = seller_review.get_vote_counts(review_id)
+    new_vote = seller_review.get_user_vote(g.user.id, review_id)
+
+    return jsonify({
+        'upvotes': counts['upvotes'],
+        'downvotes': counts['downvotes'],
+        'user_vote': new_vote,
+    })

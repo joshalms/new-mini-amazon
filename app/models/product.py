@@ -64,10 +64,12 @@ LIMIT :k
 
         rows = app.db.execute(
             '''
-SELECT id, name, price, available
-FROM Products
-WHERE available = TRUE
-ORDER BY id
+SELECT p.id, p.name, p.price, p.available, AVG(pr.rating) AS average_rating
+FROM Products p
+LEFT JOIN product_review pr ON pr.product_id = p.id
+WHERE p.available = TRUE
+GROUP BY p.id, p.name, p.price, p.available
+ORDER BY p.id
 LIMIT :limit
 ''',
             limit=limit_val,

@@ -1,3 +1,5 @@
+drop table if exists product_review_vote cascade;
+drop table if exists seller_review_vote cascade;
 drop table if exists cartitem cascade;
 drop table if exists cart cascade;
 drop table if exists inventory cascade;
@@ -117,9 +119,29 @@ CREATE TABLE cartitem (
     quantity INT NOT NULL CHECK (quantity > 0)
 );
 
+-- votes for product reviews (one per user per review, value 1=upvote, -1=downvote)
+create table product_review_vote (
+    user_id int not null references users(id) on delete cascade,
+    review_id int not null references product_review(id) on delete cascade,
+    vote_value int not null check (vote_value in (-1, 1)),
+    created_at timestamptz not null default now(),
+    primary key (user_id, review_id)
+);
+
+-- votes for seller reviews (one per user per review, value 1=upvote, -1=downvote)
+create table seller_review_vote (
+    user_id int not null references users(id) on delete cascade,
+    review_id int not null references seller_review(id) on delete cascade,
+    vote_value int not null check (vote_value in (-1, 1)),
+    created_at timestamptz not null default now(),
+    primary key (user_id, review_id)
+);
+
 -- Indexes to keep purchase lookups fast under pagination/filtering
 CREATE INDEX IF NOT EXISTS idx_orders_buyer_created ON orders (buyer_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_seller_id ON order_items (seller_id);
 CREATE INDEX IF NOT EXISTS idx_products_name_lower ON products (LOWER(name));
+CREATE INDEX IF NOT EXISTS idx_product_review_vote_review ON product_review_vote (review_id);
+CREATE INDEX IF NOT EXISTS idx_seller_review_vote_review ON seller_review_vote (review_id);

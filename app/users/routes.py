@@ -861,9 +861,29 @@ def public_profile(user_id: int):
     if not user_row:
         abort(404)
 
+    sort = request.args.get('sort', 'date')
     is_seller = _is_user_seller(user_id)
-    seller_reviews = seller_review.get_recent_reviews_for_seller(user_id, limit=10)
+    seller_reviews_list = seller_review.get_recent_reviews_for_seller(user_id, limit=10, sort=sort)
     seller_summary = seller_review.get_summary_for_seller(user_id)
+
+    # check if logged-in user can review this seller
+    user_review = None
+    review_url = None
+    can_review = False
+    user_votes = {}
+
+    if g.user and g.user.id != user_id:
+        user_review = seller_review.get_user_review_for_seller(g.user.id, user_id)
+        order_info = purchases.get_user_order_with_seller(g.user.id, user_id)
+        if order_info:
+            can_review = True
+            review_url = url_for(
+                'account.review_seller',
+                order_id=order_info['order_id'],
+                seller_id=user_id,
+            )
+    if g.user:
+        user_votes = seller_review.get_user_votes_for_seller(g.user.id, user_id)
 
     return render_template(
         'users/public_profile.html',
@@ -875,8 +895,13 @@ def public_profile(user_id: int):
             'created_at': user_row[4],
         },
         is_seller=is_seller,
-        seller_reviews=seller_reviews,
+        seller_reviews=seller_reviews_list,
         seller_summary=seller_summary,
+        current_sort=sort,
+        user_review=user_review,
+        review_url=review_url,
+        can_review=can_review,
+        user_votes=user_votes,
     )
 
 

@@ -36,5 +36,14 @@
     </div>
     <button type="submit" class="btn btn-black">Save Review</button>
   </form>
+
+  {% if review %}
+  <hr>
+  <form method="post" action="{% if review_type == 'product' %}{{ url_for('account.delete_product_review', review_id=review.id) }}{% else %}{{ url_for('account.delete_seller_review', review_id=review.id) }}{% endif %}" onsubmit="return confirm('Delete this review?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ url_for('account.order_detail', order_id=order.order_id) }}">
+    <button type="submit" class="btn btn-outline-danger">Delete Review</button>
+  </form>
+  {% endif %}
 </div>
 {% endblock %}

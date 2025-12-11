@@ -22,10 +22,33 @@
           {% endif %}
         </div>
       </div>
+      {% if g.user %}
+      <hr>
+      <div class="d-flex align-items-center">
+        {% if can_review %}
+          {% if user_review %}
+          <a href="{{ review_url }}" class="btn btn-outline-primary">Edit your review</a>
+          <span class="ml-3 text-muted">You rated this {{ user_review.rating }}/5</span>
+          {% else %}
+          <a href="{{ review_url }}" class="btn btn-primary">Write a review</a>
+          {% endif %}
+        {% else %}
+        <span class="text-muted">Purchase this product to leave a review</span>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
   </div>
 
-  <h4 class="mb-3">Customer Reviews</h4>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Customer Reviews</h4>
+    <div>
+      <span class="text-muted mr-2">Sort by:</span>
+      <a href="{{ url_for('products.product_reviews', product_id=product.id, sort='date') }}" class="btn btn-sm {{ 'btn-primary' if current_sort == 'date' else 'btn-outline-secondary' }}">Date</a>
+      <a href="{{ url_for('products.product_reviews', product_id=product.id, sort='rating') }}" class="btn btn-sm {{ 'btn-primary' if current_sort == 'rating' else 'btn-outline-secondary' }}">Rating</a>
+      <a href="{{ url_for('products.product_reviews', product_id=product.id, sort='helpful') }}" class="btn btn-sm {{ 'btn-primary' if current_sort == 'helpful' else 'btn-outline-secondary' }}">Helpful</a>
+    </div>
+  </div>
   {% if reviews %}
   {% for review in reviews %}
   <div class="card mb-3">
@@ -50,14 +73,26 @@
         </small>
       </div>
       <p class="mb-2">{{ review.body or 'No comment provided.' }}</p>
-      <div class="text-muted small">
-        By {{ review.reviewer_name }} (User #{{ review.reviewer_id }})
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+          By {{ review.reviewer_name }} (User #{{ review.reviewer_id }})
+          {% if review.updated_at and review.updated_at != review.created_at %}
+          <em>· Edited {{ review.updated_at.strftime('%b %d, %Y') }}</em>
+          {% endif %}
+        </div>
+        <div class="d-flex align-items-center">
+          {% if g.user %}
+          <button type="button" class="btn btn-sm {{ 'btn-success' if user_votes.get(review.id) == 1 else 'btn-outline-secondary' }} vote-btn mr-1" data-review-id="{{ review.id }}" data-type="product" data-vote="1">
+            👍 <span class="vote-count">{{ review.upvotes }}</span>
+          </button>
+          <button type="button" class="btn btn-sm {{ 'btn-danger' if user_votes.get(review.id) == -1 else 'btn-outline-secondary' }} vote-btn" data-review-id="{{ review.id }}" data-type="product" data-vote="-1">
+            👎 <span class="vote-count">{{ review.downvotes }}</span>
+          </button>
+          {% else %}
+          <span class="text-muted small">👍 {{ review.upvotes }} · 👎 {{ review.downvotes }}</span>
+          {% endif %}
+        </div>
       </div>
-      {% if review.updated_at and review.updated_at != review.created_at %}
-      <div class="text-muted small">
-        <em>Last updated: {{ review.updated_at.strftime('%b %d, %Y %I:%M %p') }}</em>
-      </div>
-      {% endif %}
     </div>
   </div>
   {% endfor %}
@@ -71,4 +106,44 @@
     <a href="{{ url_for('index.index') }}" class="btn btn-secondary">Back to Products</a>
   </div>
 </div>
+
+{% if g.user %}
+<script>
+(function() {
+  document.querySelectorAll('.vote-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var reviewId = btn.dataset.reviewId;
+      var reviewType = btn.dataset.type;
+      var voteValue = parseInt(btn.dataset.vote, 10);
+      var url = '/api/reviews/' + reviewType + '/' + reviewId + '/vote';
+
+      fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({vote: voteValue})
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        // find sibling buttons for same review
+        var btns = document.querySelectorAll('.vote-btn[data-review-id="' + reviewId + '"]');
+        btns.forEach(function(b) {
+          var v = parseInt(b.dataset.vote, 10);
+          b.querySelector('.vote-count').textContent = (v === 1) ? data.upvotes : data.downvotes;
+          b.classList.remove('btn-success', 'btn-danger');
+          if (data.user_vote === v) {
+            b.classList.add(v === 1 ? 'btn-success' : 'btn-danger');
+          } else {
+            b.classList.add('btn-outline-secondary');
+          }
+        });
+      })
+      .catch(function(err) {
+        console.error('vote error:', err);
+      });
+    });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

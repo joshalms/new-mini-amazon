@@ -227,6 +227,44 @@ LIMIT :limit
     return line_items
 
 
+def get_user_order_with_product(user_id, product_id):
+    """Get the most recent order where user purchased a specific product."""
+    rows = app.db.execute(
+        """
+SELECT o.id AS order_id
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+WHERE o.buyer_id = :user_id AND oi.product_id = :product_id
+ORDER BY o.created_at DESC
+LIMIT 1
+""",
+        user_id=user_id,
+        product_id=product_id,
+    )
+    if not rows:
+        return None
+    return {'order_id': rows[0][0]}
+
+
+def get_user_order_with_seller(user_id, seller_id):
+    """Get the most recent order where user ordered from a specific seller."""
+    rows = app.db.execute(
+        """
+SELECT o.id AS order_id
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+WHERE o.buyer_id = :user_id AND oi.seller_id = :seller_id
+ORDER BY o.created_at DESC
+LIMIT 1
+""",
+        user_id=user_id,
+        seller_id=seller_id,
+    )
+    if not rows:
+        return None
+    return {'order_id': rows[0][0]}
+
+
 def get_order_detail(order_id):
     """Return header + line items for a specific order, including seller and product names."""
     header_rows = app.db.execute(

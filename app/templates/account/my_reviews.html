@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 960px;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">My Reviews</h2>
+    <div>
+      <span class="text-muted mr-2">Sort by:</span>
+      <a href="{{ url_for('account.my_reviews', sort='date') }}" class="btn btn-sm {{ 'btn-primary' if current_sort == 'date' else 'btn-outline-secondary' }}">Date</a>
+      <a href="{{ url_for('account.my_reviews', sort='rating') }}" class="btn btn-sm {{ 'btn-primary' if current_sort == 'rating' else 'btn-outline-secondary' }}">Rating</a>
+    </div>
+  </div>
+
+  <h4 class="mb-3">Product Reviews ({{ product_reviews|length }})</h4>
+  {% if product_reviews %}
+  {% for review in product_reviews %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between mb-2">
+        <div>
+          <h5 class="card-title mb-1">{{ review.product_name }}</h5>
+          <small class="text-muted">Product #{{ review.product_id }}</small>
+        </div>
+        <div class="text-right">
+          <strong>{{ review.rating }}/5</strong>
+          {% if review.rating == 5 %}
+            <span class="text-warning">★★★★★</span>
+          {% elif review.rating == 4 %}
+            <span class="text-warning">★★★★</span><span class="text-muted">★</span>
+          {% elif review.rating == 3 %}
+            <span class="text-warning">★★★</span><span class="text-muted">★★</span>
+          {% elif review.rating == 2 %}
+            <span class="text-warning">★★</span><span class="text-muted">★★★</span>
+          {% elif review.rating == 1 %}
+            <span class="text-warning">★</span><span class="text-muted">★★★★</span>
+          {% endif %}
+        </div>
+      </div>
+      <p class="mb-2">{{ review.body or 'No comment provided.' }}</p>
+      <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          {{ review.created_at.strftime('%b %d, %Y %I:%M %p') if review.created_at else '' }}
+          {% if review.updated_at and review.updated_at != review.created_at %}
+          <em>(edited {{ review.updated_at.strftime('%b %d, %Y') }})</em>
+          {% endif %}
+        </small>
+        <div>
+          <a href="{{ url_for('products.product_reviews', product_id=review.product_id) }}" class="btn btn-sm btn-outline-secondary">View all reviews</a>
+          <form method="post" action="{{ url_for('account.delete_product_review', review_id=review.id) }}" class="d-inline" onsubmit="return confirm('Delete this review?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="alert alert-info mb-4">You haven't reviewed any products yet.</div>
+  {% endif %}
+
+  <h4 class="mb-3 mt-4">Seller Reviews ({{ seller_reviews|length }})</h4>
+  {% if seller_reviews %}
+  {% for review in seller_reviews %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between mb-2">
+        <div>
+          <h5 class="card-title mb-1">{{ review.seller_name }}</h5>
+          <small class="text-muted">Seller #{{ review.seller_id }}</small>
+        </div>
+        <div class="text-right">
+          <strong>{{ review.rating }}/5</strong>
+          {% if review.rating == 5 %}
+            <span class="text-warning">★★★★★</span>
+          {% elif review.rating == 4 %}
+            <span class="text-warning">★★★★</span><span class="text-muted">★</span>
+          {% elif review.rating == 3 %}
+            <span class="text-warning">★★★</span><span class="text-muted">★★</span>
+          {% elif review.rating == 2 %}
+            <span class="text-warning">★★</span><span class="text-muted">★★★</span>
+          {% elif review.rating == 1 %}
+            <span class="text-warning">★</span><span class="text-muted">★★★★</span>
+          {% endif %}
+        </div>
+      </div>
+      <p class="mb-2">{{ review.body or 'No comment provided.' }}</p>
+      <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          {{ review.created_at.strftime('%b %d, %Y %I:%M %p') if review.created_at else '' }}
+          {% if review.updated_at and review.updated_at != review.created_at %}
+          <em>(edited {{ review.updated_at.strftime('%b %d, %Y') }})</em>
+          {% endif %}
+        </small>
+        <div>
+          <a href="{{ url_for('account.public_profile', user_id=review.seller_id) }}" class="btn btn-sm btn-outline-secondary">View seller</a>
+          <form method="post" action="{{ url_for('account.delete_seller_review', review_id=review.id) }}" class="d-inline" onsubmit="return confirm('Delete this review?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="alert alert-info">You haven't reviewed any sellers yet.</div>
+  {% endif %}
+
+  <div class="mt-4">
+    <a href="{{ url_for('account.account_home') }}" class="btn btn-secondary">Back to Account</a>
+  </div>
+</div>
+{% endblock %}
