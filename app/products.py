@@ -139,3 +139,15 @@ def product_detail(product_id):
     if not product:
         abort(404)
     return render_template('product_detail.html', product=product)
+
+@bp.route('/products/<int:product_id>/reviews')
+def product_reviews(product_id):
+    product = Product.get(product_id)
+    if not product:
+        abort(404)
+    reviews = product_review.get_recent_reviews_for_product(product_id)
+    return render_template("product_reviews.html",
+                           product=product,
+                           reviews=reviews)
+    
+
