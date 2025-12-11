@@ -1,48 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="row mt-4">
+<div class="row" style="margin-top: 20px;">
 
-    <!-- PRODUCT IMAGE -->
-    <div class="col-md-4">
+```
+<!-- IMAGE -->
+<div class="col-md-4">
+    {% if product.image_url %}
         <img src="{{ product.image_url }}" 
-             alt="{{ product.name }}"
-             class="img-fluid rounded shadow-sm mb-3">
-    </div>
+             alt="{{ product.name }}" 
+             class="img-fluid mb-3 rounded shadow-sm">
+    {% else %}
+        <img src="/static/no-image.png" 
+             alt="No image available"
+             class="img-fluid mb-3 rounded shadow-sm">
+    {% endif %}
+</div>
 
-    <!-- PRODUCT DETAILS -->
-    <div class="col-md-8">
-        <h2>{{ product.name }}</h2>
+<!-- DETAILS -->
+<div class="col-md-8">
+    <h2>{{ product.name }}</h2>
 
-        <!-- RATING -->
-        <p class="fs-5">
-            ⭐ {{ product.average_rating or "No rating" }}
-            ({{ product.review_count }} reviews)
-        </p>
+    <h3 style="margin-top: 10px;">${{ product.price }}</h3>
 
-        <h3 class="mt-3">${{ product.price }}</h3>
+    <p>
+        <strong>Availability:</strong>
+        {% if product.available %}
+            <span class="text-success">In Stock</span>
+        {% else %}
+            <span class="text-danger">Out of Stock</span>
+        {% endif %}
+    </p>
 
-        <p>
-            <strong>Availability:</strong>
-            {% if product.available %}
-                <span class="text-success">In Stock</span>
-            {% else %}
-                <span class="text-danger">Out of Stock</span>
-            {% endif %}
-        </p>
-
+    {% if product.description %}
         <p class="mt-3">{{ product.description }}</p>
+    {% else %}
+        <p class="mt-3 text-muted">No description available.</p>
+    {% endif %}
 
-        <form action="/cart/add/{{ product.id }}" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-primary btn-lg">Add to Cart</button>
-        </form>
+    <form action="/cart/add/{{ product.id }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary btn-lg">Add to Cart</button>
+    </form>
 
-        <a href="/products/{{ product.id }}/reviews" 
-           class="btn btn-outline-secondary mt-3">
-            View Reviews
-        </a>
-    </div>
+    <a href="/products/{{ product.id }}/reviews" class="btn btn-outline-secondary mt-3">
+        View Reviews
+    </a>
+</div>
+```
 
 </div>
 
