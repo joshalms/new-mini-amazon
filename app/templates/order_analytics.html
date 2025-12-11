@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Order Analytics</h2>
+        <a href="{{ url_for('inventory.view_inventory', user_id=user_id) }}" class="btn btn-secondary">Back to Inventory</a>
+      </div>
+
+  <h4 class="mt-4">Top Products Sold</h4>
+
+  <div style="position: relative; height:400px; width:100%;">
+    <canvas id="topProductsChart"></canvas>
+  </div>
+
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('topProductsChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ top_products|map(attribute='name')|list|tojson }},
+        datasets: [{
+            label: 'Units Sold',
+            data: {{ top_products|map(attribute='total_sold')|list|tojson }},
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

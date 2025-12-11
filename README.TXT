@@ -83,3 +83,24 @@ Code Breakdown:
         - Frontend: templates/cart.html
 Demo Video:
     - https://drive.google.com/file/d/13V5hfVyR4Q1YclDGZe1ZjFH0CfSOHl3c/view?
+
+Final Submission:
+
+Code Breakdown:
+    Users Guru (Josh):
+        - Backend: account.py, models/user.py, models/purchases.py
+        - Frontend: templates/account/
+    Sellers Guru (Luke):
+        - Backend: inventory_routes.py, models/inventory.py
+        - Frontend: templates/inventory,templates/add_product, templates/edit_product, templates/seller-orders, templates/seller_order_details,                 templates/seller_analytics.html, templates/order_analytics.html
+    Products Guru (Mauricio):
+        - Backend: app/products.py, models/product.py
+        - Frontend: templates/top_products.html
+    Social Guru (Rafael):
+        - Backend: account.py, models/seller_review.py
+        - Frontend: templates/seller_reviews.html
+    Cart Guru (Dhruva):
+        - Backend: cart_routes.py, models/cart.py
+        - Frontend: templates/cart.html
+Demo Video:
+    - TO BE ADDED

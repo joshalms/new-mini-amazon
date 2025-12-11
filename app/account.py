@@ -231,11 +231,16 @@ def account_home():
 @login_required
 def account_edit():
     if request.method == 'POST':
+        email = request.form.get('email', '').strip()
         full_name = request.form.get('full_name', '').strip()
         address = request.form.get('address', '').strip()
         new_password = request.form.get('new_password', '')
 
         errors = []
+        if not email:
+            errors.append('Email is required.')
+        elif '@' not in email:
+            errors.append('Enter a valid email address.')
         if not full_name:
             errors.append('Full name is required.')
         if not address:
@@ -246,7 +251,21 @@ def account_edit():
                 flash(error, 'error')
             return render_template('account/account_edit.html', user=g.user)
 
-        User.update_profile(g.user.id, full_name, address)
+        if email != g.user.email and User.email_exists(email, exclude_user_id=g.user.id):
+            flash('That email is already registered to another account.', 'error')
+            return render_template('account/account_edit.html', user=g.user)
+
+        try:
+            updated = User.update_profile(g.user.id, full_name, address, email=email)
+        except IntegrityError:
+            flash('That email is already registered to another account.', 'error')
+            return render_template('account/account_edit.html', user=g.user)
+
+        if not updated:
+            flash('Could not update your profile right now. Please try again.', 'error')
+            return render_template('account/account_edit.html', user=g.user)
+
+        g.user.email = email
         g.user.full_name = full_name
         g.user.address = address
 
