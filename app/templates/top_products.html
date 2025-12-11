@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
+
 <h1>Top Products</h1>
 
 <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:18px;">
-  
+
   <!-- Search form -->
+
   <form id="search-form" style="display:flex; gap:8px; align-items:center; margin:0;">
     <input id="search-box" name="q" type="search"
            placeholder="Search products..." class="form-control"
@@ -15,6 +17,7 @@
   </form>
 
   <!-- Sorting dropdown -->
+
   <div style="display:flex; align-items:center; gap:6px;">
     <label for="sort-select" style="margin:0;">Sort:</label>
     <select id="sort-select" class="form-select" style="max-width:220px;">
@@ -38,24 +41,33 @@
     <tbody id="products-body"></tbody>
 </table>
 
+<!-- Pagination -->
+
+<nav>
+  <ul id="pagination" class="pagination justify-content-center mt-3"></ul>
+</nav>
+
 <script>
 const csrfToken = {{ csrf_token()|tojson }};
+let currentPage = 1;
+let totalPages = 1;
+let currentQuery = '';
+let currentSort = document.getElementById('sort-select').value;
 
-// render helper
+// Render products
 function renderProducts(products) {
     const tbody = document.getElementById('products-body');
     tbody.innerHTML = '';
 
-    if (!products || products.length === 0) {
+    if (!products || products.items.length === 0) {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td colspan="4">No products found.</td>`;
         tbody.appendChild(tr);
         return;
     }
 
-    products.forEach(product => {
+    products.items.forEach(product => {
         const tr = document.createElement('tr');
-
         tr.innerHTML = `
             <td><a href="/products/${product.id}">${product.name}</a></td>
             <td>${product.price}</td>
@@ -77,48 +89,97 @@ function renderProducts(products) {
         `;
         tbody.appendChild(tr);
     });
+
+    totalPages = products.total_pages;
+    renderPagination();
 }
 
-// API utilities
-async function fetchFiltered(sort='price_high') {
-    const res = await fetch(`/api/products/filter?sort=${encodeURIComponent(sort)}`);
-    if (!res.ok) return [];
-    return res.json();
+// Render pagination
+function renderPagination() {
+    const ul = document.getElementById('pagination');
+    ul.innerHTML = '';
+
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#">Previous</a>`;
+    prevLi.addEventListener('click', e => {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            loadProducts();
+        }
+    });
+    ul.appendChild(prevLi);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+        li.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (i !== currentPage) {
+                currentPage = i;
+                loadProducts();
+            }
+        });
+        ul.appendChild(li);
+    }
+
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#">Next</a>`;
+    nextLi.addEventListener('click', e => {
+        e.preventDefault();
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadProducts();
+        }
+    });
+    ul.appendChild(nextLi);
 }
 
-async function fetchSearch(q) {
-    const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}`);
-    if (!res.ok) return [];
-    return res.json();
+// Fetch products
+async function loadProducts() {
+    let url;
+    if (currentQuery) {
+        url = `/api/products/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&sort=${currentSort}`;
+    } else {
+        url = `/api/products/filter?sort=${currentSort}&page=${currentPage}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) return renderProducts({ items: [], total_pages: 1 });
+    const data = await res.json();
+    renderProducts(data);
 }
 
-// init
-async function init() {
-    const defaultSort = document.getElementById('sort-select').value;
-    renderProducts(await fetchFiltered(defaultSort));
-}
-init();
+// Initial load
+loadProducts();
 
 // Sort change
-document.getElementById('sort-select').addEventListener('change', async (e) => {
-    renderProducts(await fetchFiltered(e.target.value));
+document.getElementById('sort-select').addEventListener('change', (e) => {
+    currentSort = e.target.value;
+    currentPage = 1;
+    loadProducts();
 });
 
-// Search
-document.getElementById('search-form').addEventListener('submit', async (e) => {
+// Search submit
+document.getElementById('search-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    const q = document.getElementById('search-box').value.trim();
-    if (!q) {
-        renderProducts(await fetchFiltered(document.getElementById('sort-select').value));
-        return;
-    }
-    renderProducts(await fetchSearch(q));
+    currentQuery = document.getElementById('search-box').value.trim();
+    currentPage = 1;
+    loadProducts();
 });
 
 // Clear search
-document.getElementById('clear-search-btn').addEventListener('click', async () => {
+document.getElementById('clear-search-btn').addEventListener('click', () => {
     document.getElementById('search-box').value = '';
-    renderProducts(await fetchFiltered(document.getElementById('sort-select').value));
+    currentQuery = '';
+    currentPage = 1;
+    loadProducts();
 });
 </script>
+
 {% endblock %}
