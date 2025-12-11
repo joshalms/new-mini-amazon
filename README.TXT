@@ -51,7 +51,7 @@ Code Breakdown:
         - Frontend: templates/inventory
     Products Guru (Mauricio):
         - Backend: app/products.py, models/product.py
-        - Frontend: templates/top_products.html
+        - Frontend: templates/top_products.html, templates/product_detail.html
     Social Guru (Rafael):
         - Backend: account.py, models/seller_review.py
         - Frontend: templates/seller_reviews.html
