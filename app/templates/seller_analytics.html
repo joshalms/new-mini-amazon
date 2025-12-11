@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Order Analytics</h2>
+        <a href="{{ url_for('inventory.view_orders', user_id=user_id) }}" class="btn btn-secondary">Back to Orders</a>
+      </div>
+
+  <h4 class="mt-4">Top Buyers by Orders</h4>
+  <canvas id="topBuyersChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById('topBuyersChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ buyer_stats|map(attribute='name')|list|tojson }},
+        datasets: [{
+            label: 'Total Orders',
+            data: {{ buyer_stats|map(attribute='total_orders')|list|tojson }},
+            backgroundColor: 'rgba(255,159,64,0.6)'
+        }]
+    },
+    options: {
+        responsive: true,
+        animation: false
+    }
+});
+</script>
+{% endblock %}

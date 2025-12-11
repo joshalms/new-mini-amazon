@@ -107,25 +107,73 @@ def update_product_quantity(user_id, product_id, new_quantity):
 
     return {"message": "Product quantity updated successfully"}
 
+from sqlalchemy import text
+
 def remove_product_from_inventory(user_id, product_id):
     with app.db.engine.begin() as conn:
+        # Check if product exists
         result = conn.execute(text("""
-            SELECT 1 
-            FROM Inventory 
-            WHERE user_id = :user_id AND product_id = :product_id
+            SELECT 1 FROM Inventory WHERE user_id = :user_id AND product_id = :product_id
         """), {"user_id": user_id, "product_id": product_id})
-
         existing = result.fetchone()
 
         if not existing:
-            return {"message": "Product not found in inventory"}, 404
+            return False, "Product not found in inventory."
 
+        # Check for outstanding order items for this seller/product
+        result = conn.execute(text("""
+            SELECT 1 FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            WHERE oi.seller_id = :user_id
+              AND oi.product_id = :product_id
+              AND oi.fulfilled_at IS NULL
+        """), {"user_id": user_id, "product_id": product_id})
+        outstanding = result.fetchone()
+
+        if outstanding:
+            raise Exception("Item cannot be removed. Fulfill outstanding orders first.")
+
+        # Safe to delete
         conn.execute(text("""
-            DELETE FROM Inventory 
-            WHERE user_id = :user_id AND product_id = :product_id
+            DELETE FROM Inventory WHERE user_id = :user_id AND product_id = :product_id
         """), {"user_id": user_id, "product_id": product_id})
 
-    return {"message": "Product removed from inventory"}
+    return True, "Product removed from inventory."
+
+
+#INVENTORY ANALYTICS
+def get_order_analytics(user_id):
+    rows = app.db.execute("""
+        SELECT p.name, SUM(oi.quantity) AS total_sold
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.seller_id = :uid
+        GROUP BY p.id
+        ORDER BY total_sold DESC
+        LIMIT 10
+    """, uid=user_id)
+    top_products = [{"name": r[0], "total_sold": r[1]} for r in rows]
+
+    return top_products
+
+#SELLER ANALYTICS
+def get_top_buyers(user_id, limit=10):
+    rows = app.db.execute("""
+        SELECT u.id, u.full_name,
+               COUNT(o.id) AS total_orders
+        FROM users u
+        JOIN orders o ON o.buyer_id = u.id
+        JOIN order_items oi ON oi.order_id = o.id
+        WHERE oi.seller_id = :uid
+        GROUP BY u.id
+        ORDER BY total_orders DESC
+        LIMIT :limit
+    """, uid=user_id, limit=limit)
+
+    return [
+        {"buyer_id": r[0], "name": r[1], "total_orders": r[2]}
+        for r in rows
+    ]
 
 #ORDER VIEWING/FULFILLMENT FUNCTIONALITY
 def get_orders_for_seller(
