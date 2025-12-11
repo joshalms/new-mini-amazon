@@ -45,6 +45,8 @@ create table products (
     available boolean default true,
     image_url text,
     description text
+    ALTER TABLE products ADD COLUMN image_url TEXT;
+    ALTER TABLE products ADD COLUMN description TEXT;
 );
 
 
