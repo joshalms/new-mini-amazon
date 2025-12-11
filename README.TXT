@@ -51,7 +51,7 @@ Code Breakdown:
         - Frontend: templates/inventory
     Products Guru (Mauricio):
         - Backend: app/products.py, models/product.py
-        - Frontend: templates/top_products.html, templates/product_detail.html
+        - Frontend: templates/top_products.html
     Social Guru (Rafael):
         - Backend: account.py, models/seller_review.py
         - Frontend: templates/seller_reviews.html
@@ -95,7 +95,7 @@ Code Breakdown:
         - Frontend: templates/inventory,templates/add_product, templates/edit_product, templates/seller-orders, templates/seller_order_details,                 templates/seller_analytics.html, templates/order_analytics.html
     Products Guru (Mauricio):
         - Backend: app/products.py, models/product.py
-        - Frontend: templates/top_products.html
+        - Frontend: templates/top_products.html, templates/product_detail.html
     Social Guru (Rafael):
         - Backend: account.py, models/seller_review.py
         - Frontend: templates/seller_reviews.html
