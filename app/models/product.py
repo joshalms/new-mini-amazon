@@ -66,15 +66,14 @@ LIMIT :k
 
         rows = app.db.execute('''
 SELECT p.id, p.name, p.price, p.available, p.image_url, p.description, AVG(pr.rating) AS average_rating
-FROM Products p
+FROM products p
 LEFT JOIN product_review pr ON pr.product_id = p.id
 WHERE p.available = TRUE
 GROUP BY p.id, p.name, p.price, p.available, p.image_url, p.description
 ORDER BY p.id
 LIMIT :limit
-''', limit=limit_val,
+''', limit=limit_val)
 
-        )
         result = [Product(*row) for row in rows]
         _FEATURED_CACHE[cache_key] = {
             'rows': result,
