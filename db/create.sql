@@ -1,3 +1,4 @@
+
 drop table if exists product_review_vote cascade;
 drop table if exists seller_review_vote cascade;
 drop table if exists cartitem cascade;

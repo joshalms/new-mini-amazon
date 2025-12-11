@@ -1,65 +1,227 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Top Products</h1>
+<h1>All Products</h1>
 
-<form id="top-k-form">
-    <label for="k">Number of products:</label>
-    <input type="number" name="k" id="k" min="1" value="1">
-    <button type="submit">Show Top Products</button>
-</form>
+<div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:18px;">
+  
+  <!-- Search form -->
+  <form id="search-form" style="display:flex; gap:8px; align-items:center; margin:0;">
+    <input id="search-box" name="q" type="search"
+           placeholder="Search products..." class="form-control"
+           style="max-width:320px;">
+    <button id="search-btn" type="submit" class="btn btn-primary">Search</button>
+    <button id="clear-search-btn" type="button" class="btn btn-light">Clear</button>
+  </form>
+
+  <!-- Sorting dropdown -->
+  <div style="display:flex; align-items:center; gap:6px;">
+    <label for="sort-select" style="margin:0;">Sort:</label>
+    <select id="sort-select" class="form-select" style="max-width:260px;">
+        <option value="price_high">Price: High → Low</option>
+        <option value="price_low">Price: Low → High</option>
+        <option value="az">A → Z</option>
+        <option value="za">Z → A</option>
+        <option value="available_only">Available Only</option>
+    </select>
+  </div>
+</div>
 
 <table id="products-table" class="table table-hover table-bordered container">
-    <tr>
-        <th>Product Name</th>
-        <th>Price</th>
-        <th>Available</th>
-        <th>Add to Cart</th>
-    </tr>
+    <thead>
+      <tr>
+          <th>Product Name</th>
+          <th>Price</th>
+          <th>Available</th>
+          <th style="text-align:center;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="products-body"></tbody>
 </table>
+
+<!-- Pagination controls -->
+<div id="pagination-controls" style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:20px;">
+
+    <div style="display:flex; gap:16px;">
+        <button id="prev-btn" class="btn btn-outline-secondary">Previous</button>
+        <span id="page-indicator" style="font-size:1.1rem; padding-top:7px;"></span>
+        <button id="next-btn" class="btn btn-outline-secondary">Next</button>
+    </div>
+
+    <div id="page-numbers" style="margin-top:8px; text-align:center;"></div>
+</div>
 
 <script>
 const csrfToken = {{ csrf_token()|tojson }};
-async function fetchTopProducts(k=5) {
-    const response = await fetch(`/api/products/topk?k=${k}`);
-    const products = await response.json();
-    const table = document.getElementById('products-table');
+let allProducts = [];
+let currentPage = 1;
+const perPage = 50;
 
-    // Reset header row
-    table.innerHTML = `
-        <tr>
-            <th>Product Name</th>
-            <th>Price</th>
-            <th>Available</th>
-        </tr>
-    `;
+// ---------- Rendering ----------
+function renderPage() {
+    const tbody = document.getElementById('products-body');
+    tbody.innerHTML = "";
 
-    products.forEach(product => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${product.name}</td>
-            <td>${product.price}</td>
-            <td>${product.available ? 'Yes' : 'No'}</td>
-            <td>
-      ${product.available ? `
-        <form action="/cart/add/${product.id}" method="POST">
-          <input type="hidden" name="csrf_token" value="${csrfToken}">
-          <input type="submit" value="Add to Cart" class="btn btn-sm btn-outline-primary"/>
-        </form>
-      ` : ''}
-    </td>
-        `;
-        table.appendChild(row);
-    });
+    const start = (currentPage - 1) * perPage;
+    const pageProducts = allProducts.slice(start, start + perPage);
+
+    if (pageProducts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4">No products found.</td></tr>`;
+    } else {
+        pageProducts.forEach(product => {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td><a href="/products/${product.id}">${product.name}</a></td>
+                <td>${product.price}</td>
+                <td>${product.available ? "Yes" : "No"}</td>
+                <td>
+                    <div style="display:flex; gap:8px; justify-content:center;">
+                        ${product.available ? `
+                        <form action="/cart/add/${product.id}" method="POST" style="margin:0;">
+                          <input type="hidden" name="csrf_token" value="${csrfToken}">
+                          <input type="submit" value="Add to Cart" class="btn btn-sm btn-primary"/>
+                        </form>` : ''}
+
+                        <form action="/wishlist/add/${product.id}" method="POST" style="margin:0;">
+                          <input type="hidden" name="csrf_token" value="${csrfToken}">
+                          <input type="submit" value="Wishlist" class="btn btn-sm btn-success"/>
+                        </form>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    updatePaginationControls();
 }
 
-// load default top products
-fetchTopProducts();
+// ---------- Pagination ----------
+function updatePaginationControls() {
+    const totalPages = Math.ceil(allProducts.length / perPage);
+    document.getElementById("page-indicator").textContent =
+        `Page ${currentPage} of ${totalPages || 1}`;
 
-document.getElementById('top-k-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const k = document.getElementById('k').value;
-    fetchTopProducts(k);
+    document.getElementById("prev-btn").disabled = currentPage <= 1;
+    document.getElementById("next-btn").disabled = currentPage >= totalPages;
+
+    buildPageNumberButtons(totalPages);
+}
+
+function buildPageNumberButtons(totalPages) {
+    const container = document.getElementById("page-numbers");
+    container.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    const maxButtons = 7;
+    let start = Math.max(1, currentPage - 3);
+    let end = Math.min(totalPages, start + maxButtons - 1);
+
+    if (end - start < maxButtons - 1) {
+        start = Math.max(1, end - maxButtons + 1);
+    }
+
+    if (start > 1) {
+        addPageBtn(container, 1);
+        if (start > 2) container.append(" ... ");
+    }
+
+    for (let i = start; i <= end; i++) {
+        addPageBtn(container, i, i === currentPage);
+    }
+
+    if (end < totalPages) {
+        if (end < totalPages - 1) container.append(" ... ");
+        addPageBtn(container, totalPages);
+    }
+}
+
+function addPageBtn(container, page, active=false) {
+    const btn = document.createElement("button");
+    btn.textContent = page;
+    btn.className = active ? "btn btn-primary btn-sm" : "btn btn-outline-secondary btn-sm";
+    btn.style.margin = "0 4px";
+    btn.onclick = () => { currentPage = page; renderPage(); };
+    container.appendChild(btn);
+}
+
+// ---------- API ----------
+async function fetchFiltered(sort='price_high') {
+    let url = `/api/products/filter?sort=${encodeURIComponent(sort)}`;
+    return (await fetch(url)).json();
+}
+
+async function fetchAvailableOnly() {
+    const res = await fetch(`/api/products/available`);
+    return res.ok ? res.json() : [];
+}
+
+async function fetchSearch(q) {
+    const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+    return res.ok ? res.json() : [];
+}
+
+// ---------- Load ----------
+async function loadAndRender(promise) {
+    allProducts = await promise;
+    currentPage = 1;
+    renderPage();
+}
+
+async function init() {
+    await loadAndRender(fetchFiltered("price_high"));
+}
+init();
+
+// ---------- Events ----------
+document.getElementById("sort-select").addEventListener("change", async e => {
+    const val = e.target.value;
+
+    if (val === "available_only") {
+        loadAndRender(fetchAvailableOnly());
+    } else {
+        loadAndRender(fetchFiltered(val));
+    }
 });
+
+document.getElementById("search-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const q = document.getElementById("search-box").value.trim();
+
+    if (!q) {
+        const sort = document.getElementById('sort-select').value;
+        if (sort === "available_only") loadAndRender(fetchAvailableOnly());
+        else loadAndRender(fetchFiltered(sort));
+    } else {
+        loadAndRender(fetchSearch(q));
+    }
+});
+
+// Clear search
+document.getElementById("clear-search-btn").addEventListener("click", () => {
+    document.getElementById("search-box").value = "";
+    const sort = document.getElementById('sort-select').value;
+
+    if (sort === "available_only") loadAndRender(fetchAvailableOnly());
+    else loadAndRender(fetchFiltered(sort));
+});
+
+// Prev/Next
+document.getElementById("prev-btn").onclick = function () {
+    if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+    }
+};
+
+document.getElementById("next-btn").onclick = function () {
+    const totalPages = Math.ceil(allProducts.length / perPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+    }
+};
 </script>
 {% endblock %}

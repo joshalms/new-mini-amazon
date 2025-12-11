@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row" style="margin-top: 20px;">
+
+```
+<!-- IMAGE -->
+<div class="col-md-4">
+    {% if product.image_url %}
+        <img src="{{ product.image_url }}" 
+             alt="{{ product.name }}" 
+             class="img-fluid mb-3 rounded shadow-sm">
+    {% else %}
+        <img src="/static/no-image.png" 
+             alt="No image available"
+             class="img-fluid mb-3 rounded shadow-sm">
+    {% endif %}
+</div>
+
+<!-- DETAILS -->
+<div class="col-md-8">
+    <h2>{{ product.name }}</h2>
+
+    <h3 style="margin-top: 10px;">${{ product.price }}</h3>
+
+    <p>
+        <strong>Availability:</strong>
+        {% if product.available %}
+            <span class="text-success">In Stock</span>
+        {% else %}
+            <span class="text-danger">Out of Stock</span>
+        {% endif %}
+    </p>
+
+    {% if product.description %}
+        <p class="mt-3">{{ product.description }}</p>
+    {% else %}
+        <p class="mt-3 text-muted">No description available.</p>
+    {% endif %}
+
+    <form action="/cart/add/{{ product.id }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary btn-lg">Add to Cart</button>
+    </form>
+
+    
+</div>
+```
+
+</div>
+
+{% endblock %}
