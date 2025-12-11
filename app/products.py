@@ -38,7 +38,7 @@ def top_k_products():
                 "available": p.available,
                 "image_url": getattr(p, "image_url", None),
                 "description": getattr(p, "description", None),
-                "avg_rating": avg,
+                "avg_rating": avg
             })
         return jsonify(output)
     except Exception as e:
@@ -76,7 +76,7 @@ def search_products():
                 "available": p.available,
                 "image_url": getattr(p, "image_url", None),
                 "description": getattr(p, "description", None),
-                "avg_rating": avg,
+                "avg_rating": avg
             })
         return jsonify(output)
     except Exception as e:
@@ -105,7 +105,7 @@ def available_products():
                 "available": p.available,
                 "image_url": getattr(p, "image_url", None),
                 "description": getattr(p, "description", None),
-                "avg_rating": getattr(p, "average_rating", None),
+                "avg_rating": getattr(p, "average_rating", None)
             })
         return jsonify(output)
     except Exception as e:
@@ -170,7 +170,7 @@ def filter_products():
                 "available": p.available,
                 "image_url": getattr(p, "image_url", None),
                 "description": getattr(p, "description", None),
-                "avg_rating": avg_map.get(p.id),
+                "avg_rating": avg_map.get(p.id)
             })
         return jsonify(output)
     except Exception as e:
