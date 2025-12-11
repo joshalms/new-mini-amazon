@@ -11,10 +11,11 @@ SELECT pg_catalog.setval('public.balance_tx_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM balance_tx), 1),
                          false);
 
-\COPY products (id, name, price, available) FROM 'Products.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
+\COPY products (id, name, price, available, image_url, description) FROM 'Products.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
 SELECT pg_catalog.setval('public.products_id_seq',
                          COALESCE((SELECT MAX(id)+1 FROM products), 1),
                          false);
+
 
 \COPY inventory (user_id, product_id, quantity) FROM 'Inventory.csv' WITH (FORMAT csv, HEADER false, DELIMITER ',', NULL '');
 
