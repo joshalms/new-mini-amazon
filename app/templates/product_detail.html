@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ product.name }}</h2>
+
+<p><strong>Price:</strong> {{ product.price }}</p>
+<p><strong>Available:</strong> {{ "Yes" if product.available else "No" }}</p>
+
+<a href="/products/{{ product.id }}/reviews" class="btn btn-info">
+    View Reviews
+</a>
+
+<br><br>
+
+<form action="/cart/add/{{ product.id }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-primary">Add to Cart</button>
+</form>
+
+{% endblock %}
